@@ -382,12 +382,7 @@ body > *:not(.bg-blobs) { position: relative; z-index: 1; }
    컨트롤 바
    ============================================ */
 .controls {
-  position: sticky;
-  top: 76px;
-  z-index: 50;
   background: color-mix(in srgb, var(--bg) 80%, transparent);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
 
@@ -452,6 +447,22 @@ body > *:not(.bg-blobs) { position: relative; z-index: 1; }
   background: var(--accent);
   color: #0a0f0a;
   border-color: var(--accent);
+}
+
+/* 출판사 칩만 활성 컬러 다르게 (블루 계열) */
+#publisherGroup .chip:hover {
+  border-color: var(--c-blue);
+  color: var(--c-blue);
+  background: color-mix(in srgb, var(--c-blue) 10%, transparent);
+}
+#publisherGroup .chip.is-active {
+  background: var(--c-blue);
+  color: #ffffff;
+  border-color: var(--c-blue);
+}
+[data-theme="dark"] #publisherGroup .chip.is-active {
+  background: var(--c-blue);
+  color: #0a0f0a;
 }
 
 /* 뷰 스위치 */
@@ -1304,5 +1315,4 @@ button:focus-visible, a:focus-visible {
   .view-switch { margin-left: 0; width: 100%; justify-content: center; }
   .view-btn { flex: 1; justify-content: center; }
   .header { padding: 14px 0; }
-  .controls { top: 64px; }
 }
