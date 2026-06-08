@@ -1,0 +1,18 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/feed"
+  to = "/.netlify/functions/feed"
+  status = 200
+
+[[redirects]]
+  from = "/api/youtube"
+  to = "/.netlify/functions/youtube"
+  status = 200
+
+[[redirects]]
+  from = "/api/blog"
+  to = "/.netlify/functions/blog"
+  status = 200
