@@ -2,7 +2,7 @@
 // Google News RSS를 키워드별로 fetch → 통합 JSON으로 반환
 
 const SOURCES = [
-  { keyword: 'AIDT OR "AI 디지털 교과서"', topic: 'AIDT', publisher: null },
+  { keyword: 'AIDT OR "AI 디지털 교과서" OR "AI 디지털 교육자료"', topic: 'AIDT', publisher: null },
   { keyword: '에듀테크', topic: '에듀테크', publisher: null },
   { keyword: '디지털교과서 정책', topic: '정책', publisher: null },
   { keyword: '교육부 AI', topic: '정책', publisher: null },
