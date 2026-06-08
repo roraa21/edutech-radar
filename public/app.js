@@ -1,0 +1,478 @@
+/* ============================================
+   EDUTECH RADAR — App Logic
+   3 sources: news / youtube / blog
+   ============================================ */
+
+const API_NEWS    = '/api/feed';
+const API_YOUTUBE = '/api/youtube';
+const API_BLOG    = '/api/blog';
+const USE_MOCK_FALLBACK = true;
+const THEME_KEY = 'edutech-radar-theme';
+
+const state = {
+  data: { news: [], youtube: [], blog: [] },
+  updatedAt: { news: null, youtube: null, blog: null },
+  source: 'news',
+  sort: 'date',
+  topic: 'all',
+  publisher: 'all',
+  view: 'grid',
+};
+
+// ===== Mock Data =====
+const MOCK_NEWS = [
+  { id: 'n1', title: 'AI 디지털 교과서 정책, 2026년 적용 범위 재조정 발표', link: '#', pubTimestamp: Date.now() - 1000*60*60*2, description: '교육부가 AIDT 도입 학년 및 과목 범위를 일부 조정한다고 밝혔다.', source: '교육신문', topics: ['AIDT','정책'], publishers: [] },
+  { id: 'n2', title: '천재교육, 초등 영어 AIDT 학습자 데이터 분석 결과 공개', link: '#', pubTimestamp: Date.now() - 1000*60*60*5, description: '학습자별 어휘 습득 패턴과 발음 평가 데이터를 시각화한 리포트를 공개.', source: '에듀프레스', topics: ['AIDT'], publishers: ['천재교육'] },
+  { id: 'n3', title: 'YBM, 영어 회화 AI 튜터 신규 모델 베타 오픈', link: '#', pubTimestamp: Date.now() - 1000*60*60*9, description: 'GPT 기반 회화 평가 모델을 자체 음성인식 기술과 결합.', source: '디지털타임스', topics: ['에듀테크'], publishers: ['YBM'] },
+  { id: 'n4', title: '비상교육, AIDT 무료체험 신청 교사 1만 명 돌파', link: '#', pubTimestamp: Date.now() - 1000*60*60*14, description: '3개월 무료체험 프로그램 신청 교사가 누적 1만 명을 넘어섰다.', source: '한국교육신문', topics: ['AIDT'], publishers: ['비상교육'] },
+  { id: 'n5', title: '아이스크림미디어, 초등 디지털 콘텐츠 신학기 라인업 공개', link: '#', pubTimestamp: Date.now() - 1000*60*60*26, description: '2026학년도 1학기 신규 콘텐츠 50종을 공개.', source: '뉴스1', topics: ['에듀테크'], publishers: ['아이스크림미디어'] },
+  { id: 'n6', title: '동아출판, 중등 수학 AIDT 검정 통과… 시장 경쟁 본격화', link: '#', pubTimestamp: Date.now() - 1000*60*60*30, description: '중학교 수학 AIDT 부문 검정 심사를 통과했다.', source: '머니투데이', topics: ['AIDT'], publishers: ['동아'] },
+  { id: 'n7', title: '능률교육, 영어 어휘 학습 앱 누적 다운로드 500만 돌파', link: '#', pubTimestamp: Date.now() - 1000*60*60*38, description: '대표 영어 학습 앱이 출시 5년 만에 500만 건을 기록.', source: 'IT조선', topics: ['에듀테크'], publishers: ['능률'] },
+  { id: 'n8', title: '미래엔, 학교 현장 AIDT 활용 연수 프로그램 확대', link: '#', pubTimestamp: Date.now() - 1000*60*60*60, description: '교사 대상 활용 연수를 전국 단위로 확대 운영.', source: '에듀인뉴스', topics: ['AIDT'], publishers: ['미래엔'] },
+  { id: 'n9', title: '교육부, 디지털 격차 해소 위한 추가 예산 편성 검토', link: '#', pubTimestamp: Date.now() - 1000*60*60*72, description: '농어촌 학교 대상 디지털 인프라 보강 예산 검토.', source: '한겨레', topics: ['정책'], publishers: [] },
+];
+
+const MOCK_YOUTUBE = [
+  { id: 'y1', type: 'youtube', title: '[비상교육] 2026 신학기 AIDT 활용 가이드 (선생님 편)', link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', pubTimestamp: Date.now() - 1000*60*60*4, description: '비상교육 AIDT를 처음 사용하시는 선생님들을 위한 5분 가이드입니다.', source: 'YouTube', publisher: '비상교육', thumbnail: 'https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=480&h=270&fit=crop' },
+  { id: 'y2', type: 'youtube', title: '[천재교육] 초등 수학 디지털 교과서 신규 콘텐츠 소개', link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', pubTimestamp: Date.now() - 1000*60*60*18, description: '2026년 새 학기를 맞아 추가된 수학 콘텐츠를 한 영상에 담았습니다.', source: 'YouTube', publisher: '천재교육', thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=480&h=270&fit=crop' },
+  { id: 'y3', type: 'youtube', title: '[아이스크림미디어] 띵커벨로 만드는 참여형 수업', link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', pubTimestamp: Date.now() - 1000*60*60*32, description: '띵커벨 퀴즈와 보드 기능을 활용한 실제 수업 사례.', source: 'YouTube', publisher: '아이스크림미디어', thumbnail: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=480&h=270&fit=crop' },
+  { id: 'y4', type: 'youtube', title: '[YBM교육] 영어 회화 AI 튜터, 이렇게 활용하세요', link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', pubTimestamp: Date.now() - 1000*60*60*48, description: '회화 평가 AI 모델 사용법을 단계별로 소개합니다.', source: 'YouTube', publisher: 'YBM교육', thumbnail: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=480&h=270&fit=crop' },
+  { id: 'y5', type: 'youtube', title: '[미래엔] 현재엔 채널 신규 영상 — 학교 현장 인터뷰', link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', pubTimestamp: Date.now() - 1000*60*60*64, description: '현장 교사들과 함께한 디지털 교육 이야기.', source: 'YouTube', publisher: '미래엔', thumbnail: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=480&h=270&fit=crop' },
+  { id: 'y6', type: 'youtube', title: '[NE능률] 중등 영어 신간 발표회 하이라이트', link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', pubTimestamp: Date.now() - 1000*60*60*92, description: '2026년 봄 신간 라인업과 핵심 변화점을 정리했습니다.', source: 'YouTube', publisher: 'NE능률', thumbnail: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=480&h=270&fit=crop' },
+  { id: 'y7', type: 'youtube', title: '[천재교과서] 티셀파 신기능 데모', link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', pubTimestamp: Date.now() - 1000*60*60*120, description: '교수학습 무료지원 티셀파에 추가된 기능 데모.', source: 'YouTube', publisher: '천재교과서', thumbnail: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=480&h=270&fit=crop' },
+];
+
+const MOCK_BLOG = [
+  { id: 'b1', type: 'blog', title: '[비상교육 공식 블로그] 2026 신학기 AIDT 운영 매뉴얼 안내', link: '#', pubTimestamp: Date.now() - 1000*60*60*3, description: '신학기를 맞아 AIDT 운영 매뉴얼을 업데이트했습니다. 주요 변경사항과 활용 팁을 확인하세요.', source: '네이버 블로그', publisher: '비상교육' },
+  { id: 'b2', type: 'blog', title: '[천재교육 공식] 학부모를 위한 AI 디지털 교과서 Q&A', link: '#', pubTimestamp: Date.now() - 1000*60*60*16, description: '자녀의 AIDT 학습에 대해 학부모님들이 가장 궁금해하시는 질문 10가지를 정리했습니다.', source: '네이버 블로그', publisher: '천재교육' },
+  { id: 'b3', type: 'blog', title: '[아이스크림미디어] 디지털 수업 콘텐츠 활용 사례 모음', link: '#', pubTimestamp: Date.now() - 1000*60*60*28, description: '전국 초등 교실에서 실제로 진행된 디지털 수업 사례 30선.', source: '네이버 블로그', publisher: '아이스크림미디어' },
+  { id: 'b4', type: 'blog', title: '[미래엔] 신간 안내 — 2026 개정 교육과정 교과서', link: '#', pubTimestamp: Date.now() - 1000*60*60*44, description: '2022 개정 교육과정에 맞춘 신규 교과서 라인업을 소개합니다.', source: '네이버 블로그', publisher: '미래엔' },
+  { id: 'b5', type: 'blog', title: '[YBM교육] 영어 학습관 신규 캠페인 안내', link: '#', pubTimestamp: Date.now() - 1000*60*60*58, description: '봄 학기 신규 등록 이벤트와 무료 레벨 테스트 안내.', source: '네이버 블로그', publisher: 'YBM교육' },
+  { id: 'b6', type: 'blog', title: '[천재교과서] 티셀파 새 학기 자료 업데이트 안내', link: '#', pubTimestamp: Date.now() - 1000*60*60*80, description: '교수학습 무료지원 티셀파에 신학기 자료 1,200건이 추가되었습니다.', source: '네이버 블로그', publisher: '천재교과서' },
+];
+
+const els = {
+  feed: document.getElementById('feed'),
+  countText: document.getElementById('countText'),
+  updatedText: document.getElementById('updatedText'),
+  todayDate: document.getElementById('todayDate'),
+  statCount: document.getElementById('statCount'),
+  statusBar: document.getElementById('statusBar'),
+  sourceTabs: document.getElementById('sourceTabs'),
+  countNews: document.getElementById('countNews'),
+  countYoutube: document.getElementById('countYoutube'),
+  countBlog: document.getElementById('countBlog'),
+  sortGroup: document.getElementById('sortGroup'),
+  topicGroup: document.getElementById('topicGroup'),
+  publisherGroup: document.getElementById('publisherGroup'),
+  viewGrid: document.getElementById('viewGrid'),
+  viewWeekly: document.getElementById('viewWeekly'),
+  themeToggle: document.getElementById('themeToggle'),
+  emptyTpl: document.getElementById('emptyTemplate'),
+};
+
+function init() {
+  initTheme();
+  setTodayDate();
+  bindControls();
+  loadAllData();
+}
+
+function setTodayDate() {
+  const now = new Date();
+  const opts = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+  els.todayDate.textContent = now.toLocaleDateString('ko-KR', opts);
+}
+
+function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+  const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (systemDark ? 'dark' : 'light'));
+  els.themeToggle.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = current === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  });
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+}
+
+async function loadAllData() {
+  const [newsR, ytR, blogR] = await Promise.allSettled([
+    loadSource(API_NEWS, MOCK_NEWS),
+    loadSource(API_YOUTUBE, MOCK_YOUTUBE),
+    loadSource(API_BLOG, MOCK_BLOG),
+  ]);
+
+  state.data.news    = (newsR.value && newsR.value.items) || MOCK_NEWS;
+  state.data.youtube = (ytR.value && ytR.value.items) || MOCK_YOUTUBE;
+  state.data.blog    = (blogR.value && blogR.value.items) || MOCK_BLOG;
+
+  const now = new Date().toISOString();
+  state.updatedAt.news    = (newsR.value && newsR.value.updatedAt) || now;
+  state.updatedAt.youtube = (ytR.value && ytR.value.updatedAt) || now;
+  state.updatedAt.blog    = (blogR.value && blogR.value.updatedAt) || now;
+
+  const anyReal = [newsR, ytR, blogR].some(r => r.status === 'fulfilled' && r.value && r.value.isReal);
+  setStatus(anyReal ? 'ok' : 'error', anyReal ? '실시간' : '데모 모드');
+
+  updateTabCounts();
+  render();
+}
+
+async function loadSource(url, fallback) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
+      return { items: fallback, updatedAt: new Date().toISOString(), isReal: false };
+    }
+    return { items: data.items, updatedAt: data.updatedAt, isReal: true };
+  } catch (err) {
+    if (USE_MOCK_FALLBACK) {
+      return { items: fallback, updatedAt: new Date().toISOString(), isReal: false };
+    }
+    return { items: [], updatedAt: null, isReal: false };
+  }
+}
+
+function setStatus(type, text) {
+  const dot = els.statusBar.querySelector('.status-dot');
+  const txt = els.statusBar.querySelector('.status-text');
+  dot.className = 'status-dot';
+  if (type === 'ok') dot.classList.add('is-ok');
+  if (type === 'error') dot.classList.add('is-error');
+  txt.textContent = text;
+}
+
+function updateTabCounts() {
+  els.countNews.textContent = state.data.news.length;
+  els.countYoutube.textContent = state.data.youtube.length;
+  els.countBlog.textContent = state.data.blog.length;
+}
+
+function bindControls() {
+  els.sourceTabs.addEventListener('click', (e) => {
+    const tab = e.target.closest('button.src-tab');
+    if (!tab) return;
+    const source = tab.getAttribute('data-source');
+    if (source === state.source) return;
+    els.sourceTabs.querySelectorAll('button.src-tab').forEach(b => b.classList.remove('is-active'));
+    tab.classList.add('is-active');
+    state.source = source;
+    state.topic = 'all';
+    els.topicGroup.querySelectorAll('button.chip').forEach((b, i) => {
+      b.classList.toggle('is-active', i === 0);
+    });
+    render();
+  });
+
+  bindChipGroup(els.sortGroup, 'data-sort', (v) => { state.sort = v; render(); });
+  bindChipGroup(els.topicGroup, 'data-topic', (v) => { state.topic = v; render(); });
+  bindChipGroup(els.publisherGroup, 'data-publisher', (v) => { state.publisher = v; render(); });
+
+  els.viewGrid.addEventListener('click', () => switchView('grid'));
+  els.viewWeekly.addEventListener('click', () => switchView('weekly'));
+}
+
+function switchView(view) {
+  state.view = view;
+  els.viewGrid.classList.toggle('is-active', view === 'grid');
+  els.viewWeekly.classList.toggle('is-active', view === 'weekly');
+  els.viewGrid.setAttribute('aria-selected', view === 'grid');
+  els.viewWeekly.setAttribute('aria-selected', view === 'weekly');
+  render();
+}
+
+function bindChipGroup(container, attr, onChange) {
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('button.chip');
+    if (!btn) return;
+    container.querySelectorAll('button.chip').forEach((b) => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    onChange(btn.getAttribute(attr));
+  });
+}
+
+function getCurrentItems() {
+  return state.data[state.source] || [];
+}
+
+function getFilteredItems() {
+  return getCurrentItems().filter((it) => {
+    if (state.source === 'news') {
+      if (state.topic !== 'all' && !(it.topics || []).includes(state.topic)) return false;
+      if (state.publisher !== 'all' && !(it.publishers || []).includes(state.publisher)) return false;
+    } else {
+      if (state.publisher !== 'all') {
+        const pub = it.publisher || '';
+        if (!pub.includes(state.publisher) && state.publisher !== pub) return false;
+      }
+    }
+    return true;
+  });
+}
+
+function getSortedItems() {
+  const items = getFilteredItems();
+  if (state.sort === 'popular') {
+    return [...items].sort((a, b) => popularityScore(b) - popularityScore(a));
+  }
+  return [...items].sort((a, b) => (b.pubTimestamp || 0) - (a.pubTimestamp || 0));
+}
+
+function popularityScore(item) {
+  const tagCount = (item.topics?.length || 0) + (item.publishers?.length || 0) + (item.publisher ? 1 : 0);
+  const ageDays = (Date.now() - (item.pubTimestamp || 0)) / (1000 * 60 * 60 * 24);
+  const recencyBoost = Math.max(0, 7 - ageDays);
+  return tagCount * 3 + recencyBoost;
+}
+
+function render() {
+  const items = getSortedItems();
+  updateMeta(items.length);
+  if (items.length === 0) { renderEmpty(); return; }
+  if (state.view === 'weekly') renderWeekly(items);
+  else renderGrid(items);
+}
+
+function updateMeta(count) {
+  els.countText.textContent = `${count.toLocaleString()} 건`;
+  if (els.statCount) {
+    const total = state.data.news.length + state.data.youtube.length + state.data.blog.length;
+    els.statCount.textContent = total.toLocaleString();
+  }
+  const ts = state.updatedAt[state.source];
+  if (ts) {
+    const dt = new Date(ts);
+    const time = dt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    els.updatedText.textContent = `갱신: ${time}`;
+  }
+}
+
+function renderEmpty() {
+  els.feed.className = 'feed';
+  els.feed.innerHTML = '';
+  els.feed.appendChild(els.emptyTpl.content.cloneNode(true));
+}
+
+function renderGrid(items) {
+  els.feed.className = 'feed';
+  els.feed.innerHTML = '';
+  items.forEach((item, idx) => {
+    let card;
+    if (state.source === 'youtube' || item.type === 'youtube') {
+      card = createVideoCard(item);
+    } else if (state.source === 'blog' || item.type === 'blog') {
+      card = createBlogCard(item);
+    } else {
+      card = createNewsCard(item, idx === 0 && state.sort === 'date');
+    }
+    card.style.animationDelay = `${Math.min(idx, 12) * 0.04}s`;
+    els.feed.appendChild(card);
+  });
+}
+
+function createNewsCard(item, isFeature) {
+  const a = document.createElement('a');
+  a.className = 'card' + (isFeature ? ' is-feature' : '');
+  a.href = item.link;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+  meta.innerHTML = `<span class="card-source">${escapeHtml(item.source || '출처')}</span><span class="card-time">${formatRelativeTime(item.pubTimestamp)}</span>`;
+
+  const title = document.createElement('h2');
+  title.className = 'card-title';
+  title.textContent = item.title;
+
+  const desc = document.createElement('p');
+  desc.className = 'card-desc';
+  desc.textContent = (item.description || '').slice(0, 200);
+
+  const tags = document.createElement('div');
+  tags.className = 'card-tags';
+  (item.topics || []).forEach((t) => {
+    const tag = document.createElement('span');
+    tag.className = 'tag tag--topic';
+    tag.textContent = t;
+    tags.appendChild(tag);
+  });
+  (item.publishers || []).forEach((p) => {
+    const tag = document.createElement('span');
+    tag.className = 'tag tag--pub';
+    tag.textContent = p;
+    tags.appendChild(tag);
+  });
+
+  a.append(meta, title, desc);
+  if (tags.children.length > 0) a.appendChild(tags);
+  return a;
+}
+
+function createVideoCard(item) {
+  const a = document.createElement('a');
+  a.className = 'card is-video';
+  a.href = item.link;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+
+  const ytId = extractYoutubeId(item.link);
+  const thumbUrl = item.thumbnail || (ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : '');
+
+  const thumb = document.createElement('div');
+  thumb.className = 'video-thumb';
+  thumb.innerHTML = `
+    <span class="video-platform">
+      <svg viewBox="0 0 24 24"><path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418 c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768 C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.861-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/></svg>
+      YOUTUBE
+    </span>
+    ${thumbUrl ? `<img src="${escapeHtml(thumbUrl)}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : ''}
+    <span class="video-play">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </span>
+  `;
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  const title = document.createElement('h2');
+  title.className = 'card-title';
+  title.textContent = item.title;
+
+  const tags = document.createElement('div');
+  tags.className = 'card-tags';
+  if (item.publisher) {
+    const tag = document.createElement('span');
+    tag.className = 'tag tag--pub';
+    tag.textContent = item.publisher;
+    tags.appendChild(tag);
+  }
+
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+  meta.innerHTML = `<span class="card-source">${escapeHtml(item.source || 'YouTube')}</span><span class="card-time">${formatRelativeTime(item.pubTimestamp)}</span>`;
+
+  body.appendChild(title);
+  if (tags.children.length > 0) body.appendChild(tags);
+  body.appendChild(meta);
+
+  a.append(thumb, body);
+  return a;
+}
+
+function createBlogCard(item) {
+  const a = document.createElement('a');
+  a.className = 'card is-blog';
+  a.href = item.link;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+  meta.innerHTML = `<span class="card-source">${escapeHtml(item.source || '네이버 블로그')}</span><span class="card-time">${formatRelativeTime(item.pubTimestamp)}</span>`;
+
+  const title = document.createElement('h2');
+  title.className = 'card-title';
+  title.textContent = item.title;
+
+  const desc = document.createElement('p');
+  desc.className = 'card-desc';
+  desc.textContent = (item.description || '').slice(0, 200);
+
+  const tags = document.createElement('div');
+  tags.className = 'card-tags';
+  if (item.publisher) {
+    const tag = document.createElement('span');
+    tag.className = 'tag tag--pub';
+    tag.textContent = item.publisher;
+    tags.appendChild(tag);
+  }
+
+  a.append(meta, title, desc);
+  if (tags.children.length > 0) a.appendChild(tags);
+  return a;
+}
+
+function extractYoutubeId(url) {
+  if (!url) return '';
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/);
+  return m ? m[1] : '';
+}
+
+function renderWeekly(items) {
+  els.feed.className = 'feed is-weekly';
+  els.feed.innerHTML = '';
+
+  const sevenDaysAgo = Date.now() - 1000 * 60 * 60 * 24 * 7;
+  const recentItems = items.filter((it) => (it.pubTimestamp || 0) >= sevenDaysAgo);
+  if (recentItems.length === 0) { renderEmpty(); return; }
+
+  const groups = new Map();
+  for (const item of recentItems) {
+    const d = new Date(item.pubTimestamp);
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if (!groups.has(key)) groups.set(key, { date: d, items: [] });
+    groups.get(key).items.push(item);
+  }
+
+  const sortedGroups = Array.from(groups.values()).sort((a, b) => b.date - a.date);
+
+  sortedGroups.forEach((group, idx) => {
+    const section = document.createElement('section');
+    section.className = 'week-day';
+    section.style.animationDelay = `${idx * 0.06}s`;
+
+    const header = document.createElement('div');
+    header.className = 'week-day-header';
+    const dateStr = group.date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+    const weekday = group.date.toLocaleDateString('ko-KR', { weekday: 'long' });
+    header.innerHTML = `<div class="week-day-date">${dateStr}</div><div class="week-day-weekday">${weekday}</div><div class="week-day-count">${group.items.length}건</div>`;
+
+    const list = document.createElement('ul');
+    list.className = 'week-list';
+    group.items.sort((a, b) => b.pubTimestamp - a.pubTimestamp).forEach((item) => {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.className = 'week-item';
+      a.href = item.link;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      const t = new Date(item.pubTimestamp);
+      const timeStr = t.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      a.innerHTML = `<span class="week-item-time">${timeStr}</span><span class="week-item-title">${escapeHtml(item.title)}</span><span class="week-item-source">${escapeHtml(item.publisher || item.source || '')}</span>`;
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+
+    section.append(header, list);
+    els.feed.appendChild(section);
+  });
+}
+
+function formatRelativeTime(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  const min = Math.floor(diff / 60000);
+  const hour = Math.floor(diff / 3600000);
+  const day = Math.floor(diff / 86400000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분 전`;
+  if (hour < 24) return `${hour}시간 전`;
+  if (day < 7) return `${day}일 전`;
+  return new Date(ts).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+init();
