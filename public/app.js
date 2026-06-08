@@ -205,15 +205,30 @@ function getCurrentItems() {
 
 function getFilteredItems() {
   return getCurrentItems().filter((it) => {
-    if (state.source === 'news') {
-      if (state.topic !== 'all' && !(it.topics || []).includes(state.topic)) return false;
-      if (state.publisher !== 'all' && !(it.publishers || []).includes(state.publisher)) return false;
-    } else {
-      if (state.publisher !== 'all') {
-        const pub = it.publisher || '';
-        if (!pub.includes(state.publisher) && state.publisher !== pub) return false;
-      }
+    // 주제 필터 (뉴스에만 적용)
+    if (state.source === 'news' && state.topic !== 'all') {
+      if (!(it.topics || []).includes(state.topic)) return false;
     }
+
+    // 출판사 필터 (모든 소스에 부분 매칭으로 통일)
+    if (state.publisher !== 'all') {
+      const allPublishers = [
+        ...(it.publishers || []),
+        ...(it.publisher ? [it.publisher] : []),
+      ];
+      // 1) 데이터의 publisher 값 부분 매칭
+      let matched = allPublishers.some(p => {
+        if (!p) return false;
+        return p.includes(state.publisher) || state.publisher.includes(p);
+      });
+      // 2) 매칭 안되면 — 기사 제목/설명에 출판사명이 있는지 확인 (뉴스에 특히 유용)
+      if (!matched) {
+        const haystack = `${it.title || ''} ${it.description || ''}`;
+        if (haystack.includes(state.publisher)) matched = true;
+      }
+      if (!matched) return false;
+    }
+
     return true;
   });
 }
