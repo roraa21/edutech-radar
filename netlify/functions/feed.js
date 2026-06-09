@@ -6,6 +6,16 @@ const SOURCES = [
   { keyword: '에듀테크', topic: '에듀테크', publisher: null },
   { keyword: '디지털교과서 정책', topic: '정책', publisher: null },
   { keyword: '교육부 AI', topic: '정책', publisher: null },
+
+  // 교육청 보도자료 (Google News 인덱싱 활용)
+  { keyword: '교육부 보도자료', topic: '교육청', publisher: null },
+  { keyword: '서울시교육청', topic: '교육청', publisher: null },
+  { keyword: '경기도교육청', topic: '교육청', publisher: null },
+  { keyword: '부산시교육청', topic: '교육청', publisher: null },
+  { keyword: '인천시교육청', topic: '교육청', publisher: null },
+  { keyword: '대구시교육청', topic: '교육청', publisher: null },
+
+  // 출판사
   { keyword: '천재교육', topic: null, publisher: '천재교육' },
   { keyword: '천재교과서', topic: null, publisher: '천재교과서' },
   { keyword: 'YBM 교육', topic: null, publisher: 'YBM' },
