@@ -6,17 +6,21 @@
 const API_NEWS    = '/api/feed';
 const API_YOUTUBE = '/api/youtube';
 const API_BLOG    = '/api/blog';
+const API_CALENDAR = '/api/calendar';
 const USE_MOCK_FALLBACK = true;
 const THEME_KEY = 'edutech-radar-theme';
 
 const state = {
-  data: { news: [], youtube: [], blog: [] },
-  updatedAt: { news: null, youtube: null, blog: null },
+  data: { news: [], youtube: [], blog: [], calendar: [] },
+  updatedAt: { news: null, youtube: null, blog: null, calendar: null },
   source: 'news',
   sort: 'date',
   topic: 'all',
   publisher: 'all',
   view: 'grid',
+  // 캘린더 전용 state
+  calView: 'month', // 'month' | 'upcoming'
+  calCursor: null,  // 현재 보고 있는 월의 첫째 날
 };
 
 // ===== Mock Data =====
@@ -62,6 +66,7 @@ const els = {
   countNews: document.getElementById('countNews'),
   countYoutube: document.getElementById('countYoutube'),
   countBlog: document.getElementById('countBlog'),
+  countCalendar: document.getElementById('countCalendar'),
   sortGroup: document.getElementById('sortGroup'),
   topicGroup: document.getElementById('topicGroup'),
   publisherGroup: document.getElementById('publisherGroup'),
@@ -102,26 +107,42 @@ function applyTheme(theme) {
 }
 
 async function loadAllData() {
-  const [newsR, ytR, blogR] = await Promise.allSettled([
+  const [newsR, ytR, blogR, calR] = await Promise.allSettled([
     loadSource(API_NEWS, MOCK_NEWS),
     loadSource(API_YOUTUBE, MOCK_YOUTUBE),
     loadSource(API_BLOG, MOCK_BLOG),
+    loadCalendar(),
   ]);
 
   state.data.news    = (newsR.value && newsR.value.items) || MOCK_NEWS;
   state.data.youtube = (ytR.value && ytR.value.items) || MOCK_YOUTUBE;
   state.data.blog    = (blogR.value && blogR.value.items) || MOCK_BLOG;
+  state.data.calendar = (calR.value && calR.value.events) || [];
 
   const now = new Date().toISOString();
   state.updatedAt.news    = (newsR.value && newsR.value.updatedAt) || now;
   state.updatedAt.youtube = (ytR.value && ytR.value.updatedAt) || now;
   state.updatedAt.blog    = (blogR.value && blogR.value.updatedAt) || now;
+  state.updatedAt.calendar = (calR.value && calR.value.updatedAt) || now;
 
   const anyReal = [newsR, ytR, blogR].some(r => r.status === 'fulfilled' && r.value && r.value.isReal);
   setStatus(anyReal ? 'ok' : 'error', anyReal ? '실시간' : '데모 모드');
 
   updateTabCounts();
   render();
+}
+
+async function loadCalendar() {
+  try {
+    const res = await fetch(API_CALENDAR);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return { events: data.events || [], updatedAt: data.updatedAt };
+  } catch (err) {
+    // 캘린더는 API 실패 시 빈 배열 (mock 안 씀)
+    console.warn('Calendar API 실패:', err.message);
+    return { events: [], updatedAt: null };
+  }
 }
 
 async function loadSource(url, fallback) {
@@ -154,6 +175,7 @@ function updateTabCounts() {
   els.countNews.textContent = state.data.news.length;
   els.countYoutube.textContent = state.data.youtube.length;
   els.countBlog.textContent = state.data.blog.length;
+  if (els.countCalendar) els.countCalendar.textContent = state.data.calendar.length;
 }
 
 function bindControls() {
@@ -169,6 +191,17 @@ function bindControls() {
     els.topicGroup.querySelectorAll('button.chip').forEach((b, i) => {
       b.classList.toggle('is-active', i === 0);
     });
+
+    // 캘린더 탭이면 정렬/필터/뷰 컨트롤 숨기기
+    const isCalendar = source === 'calendar';
+    document.querySelector('.controls').style.display = isCalendar ? 'none' : '';
+
+    // 캘린더 탭으로 들어가면 cursor를 오늘 기준으로
+    if (isCalendar) {
+      const today = new Date();
+      state.calCursor = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
+
     render();
   });
 
@@ -249,6 +282,12 @@ function popularityScore(item) {
 }
 
 function render() {
+  // 캘린더는 별도 렌더 흐름
+  if (state.source === 'calendar') {
+    renderCalendar();
+    return;
+  }
+
   const items = getSortedItems();
   updateMeta(items.length);
   if (items.length === 0) { renderEmpty(); return; }
@@ -274,6 +313,278 @@ function renderEmpty() {
   els.feed.className = 'feed';
   els.feed.innerHTML = '';
   els.feed.appendChild(els.emptyTpl.content.cloneNode(true));
+}
+
+// ============================================
+// 캘린더 렌더링
+// ============================================
+function renderCalendar() {
+  els.feed.className = 'feed cal-wrap';
+  els.feed.innerHTML = '';
+
+  // 카운트/메타 업데이트
+  els.countText.textContent = `${state.data.calendar.length} 건의 일정`;
+  if (els.statCount) {
+    const total = state.data.news.length + state.data.youtube.length + state.data.blog.length + state.data.calendar.length;
+    els.statCount.textContent = total.toLocaleString();
+  }
+  els.updatedText.textContent = '2026년 표준 학사 캘린더';
+
+  // cursor 초기화 — 처음엔 오늘이 속한 달
+  if (!state.calCursor) {
+    const today = new Date();
+    state.calCursor = new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+
+  // 뷰 토글 + 범례 + 컨트롤
+  const controls = document.createElement('div');
+  controls.className = 'cal-view-switch';
+  controls.innerHTML = `
+    <div class="cal-view-buttons" role="tablist">
+      <button class="${state.calView === 'month' ? 'is-active' : ''}" data-cal-view="month">월간 캘린더</button>
+      <button class="${state.calView === 'upcoming' ? 'is-active' : ''}" data-cal-view="upcoming">다가오는 일정</button>
+    </div>
+    <div class="cat-legend">
+      <span class="cat-legend-item"><span class="cat-legend-dot cat-exam"></span>시험</span>
+      <span class="cat-legend-item"><span class="cat-legend-dot cat-academic"></span>학사</span>
+      <span class="cat-legend-item"><span class="cat-legend-dot cat-edu"></span>교육주간</span>
+      <span class="cat-legend-item"><span class="cat-legend-dot cat-holiday"></span>공휴일</span>
+      <span class="cat-legend-item"><span class="cat-legend-dot cat-marketing"></span>마케팅</span>
+    </div>
+  `;
+  els.feed.appendChild(controls);
+
+  controls.querySelectorAll('.cal-view-buttons button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.calView = btn.getAttribute('data-cal-view');
+      renderCalendar();
+    });
+  });
+
+  if (state.calView === 'month') {
+    renderCalendarMonth();
+  } else {
+    renderCalendarUpcoming();
+  }
+}
+
+function renderCalendarMonth() {
+  const cursor = state.calCursor;
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth(); // 0-11
+
+  // 월 네비게이션
+  const nav = document.createElement('div');
+  nav.className = 'cal-month-nav';
+  nav.innerHTML = `
+    <button class="cal-month-btn" id="calPrev" aria-label="이전 달">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="cal-month-title">${year}년 ${month + 1}월</div>
+    <button class="cal-month-btn" id="calNext" aria-label="다음 달">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  `;
+  els.feed.appendChild(nav);
+
+  document.getElementById('calPrev').addEventListener('click', () => {
+    state.calCursor = new Date(year, month - 1, 1);
+    renderCalendar();
+  });
+  document.getElementById('calNext').addEventListener('click', () => {
+    state.calCursor = new Date(year, month + 1, 1);
+    renderCalendar();
+  });
+
+  const wrap = document.createElement('div');
+  wrap.className = 'cal-grid-wrap';
+
+  // 요일 헤더
+  const weekdays = document.createElement('div');
+  weekdays.className = 'cal-weekdays';
+  ['일', '월', '화', '수', '목', '금', '토'].forEach((d, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cal-weekday' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '');
+    cell.textContent = d;
+    weekdays.appendChild(cell);
+  });
+  wrap.appendChild(weekdays);
+
+  // 그리드
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid';
+
+  // 이번 달 첫 날의 요일 (0=일)
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = lastDay.getDate();
+
+  // 이전 달 마지막 날짜들 (회색 표시)
+  const prevLastDay = new Date(year, month, 0).getDate();
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    const dayNum = prevLastDay - i;
+    grid.appendChild(createCalDay(new Date(year, month - 1, dayNum), true));
+  }
+  // 이번 달
+  for (let d = 1; d <= daysInMonth; d++) {
+    grid.appendChild(createCalDay(new Date(year, month, d), false));
+  }
+  // 다음 달 첫 날짜들 (6주 채우기)
+  const totalCells = startWeekday + daysInMonth;
+  const remainder = totalCells % 7;
+  if (remainder !== 0) {
+    const need = 7 - remainder;
+    for (let d = 1; d <= need; d++) {
+      grid.appendChild(createCalDay(new Date(year, month + 1, d), true));
+    }
+  }
+
+  wrap.appendChild(grid);
+  els.feed.appendChild(wrap);
+}
+
+function createCalDay(date, isOtherMonth) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dateOnly = new Date(date);
+  dateOnly.setHours(0, 0, 0, 0);
+  const isToday = dateOnly.getTime() === today.getTime();
+
+  const cell = document.createElement('div');
+  cell.className = 'cal-day' + (isOtherMonth ? ' is-other-month' : '') + (isToday ? ' is-today' : '');
+
+  const dayNum = document.createElement('div');
+  dayNum.className = 'cal-day-num';
+  const wd = date.getDay();
+  if (wd === 0) dayNum.classList.add('is-sun');
+  if (wd === 6) dayNum.classList.add('is-sat');
+  dayNum.textContent = date.getDate();
+  cell.appendChild(dayNum);
+
+  // 이 날짜에 해당하는 이벤트
+  const events = getEventsForDate(date);
+  const maxShow = 3;
+  events.slice(0, maxShow).forEach(ev => {
+    const evEl = document.createElement('div');
+    evEl.className = `cal-event cat-${ev.category}`;
+    evEl.textContent = ev.title;
+    evEl.title = `${ev.title}${ev.description ? '\n' + ev.description : ''}`;
+    cell.appendChild(evEl);
+  });
+  if (events.length > maxShow) {
+    const more = document.createElement('div');
+    more.className = 'cal-event-more';
+    more.textContent = `+${events.length - maxShow}건`;
+    cell.appendChild(more);
+  }
+
+  return cell;
+}
+
+function getEventsForDate(date) {
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  return state.data.calendar.filter(ev => {
+    const start = new Date(ev.date);
+    const end = new Date(ev.endDate || ev.date);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    return target >= start && target <= end;
+  });
+}
+
+function renderCalendarUpcoming() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const wrap = document.createElement('div');
+  wrap.className = 'cal-upcoming';
+
+  // 일정을 (1) 진행 중/오늘, (2) 다가오는 (오름차순), (3) 지난 일정 (내림차순) 으로 그룹
+  const ongoing = [];
+  const upcoming = [];
+  const past = [];
+
+  state.data.calendar.forEach(ev => {
+    const start = new Date(ev.date); start.setHours(0,0,0,0);
+    const end = new Date(ev.endDate || ev.date); end.setHours(0,0,0,0);
+    if (today >= start && today <= end) {
+      ongoing.push(ev);
+    } else if (start > today) {
+      upcoming.push(ev);
+    } else {
+      past.push(ev);
+    }
+  });
+
+  ongoing.sort((a, b) => new Date(a.date) - new Date(b.date));
+  upcoming.sort((a, b) => new Date(a.date) - new Date(b.date));
+  past.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (ongoing.length > 0) {
+    wrap.appendChild(createUpcomingGroup('진행 중 · 오늘 시작', ongoing.slice(0, 10), today, 'today'));
+  }
+  if (upcoming.length > 0) {
+    wrap.appendChild(createUpcomingGroup('다가오는 일정', upcoming.slice(0, 20), today, 'upcoming'));
+  }
+  if (past.length > 0) {
+    wrap.appendChild(createUpcomingGroup('지난 일정', past.slice(0, 8), today, 'past'));
+  }
+
+  els.feed.appendChild(wrap);
+}
+
+function createUpcomingGroup(title, events, today, mode) {
+  const group = document.createElement('div');
+  group.className = 'upcoming-group';
+
+  const heading = document.createElement('h3');
+  heading.className = 'upcoming-group-title';
+  heading.textContent = `${title} (${events.length})`;
+  group.appendChild(heading);
+
+  events.forEach(ev => {
+    const item = document.createElement('div');
+    item.className = 'upcoming-item';
+    if (mode === 'today') item.classList.add('is-today');
+    if (mode === 'past') item.classList.add('is-past');
+
+    const start = new Date(ev.date);
+    const end = new Date(ev.endDate || ev.date);
+    const diff = Math.round((start - today) / (1000 * 60 * 60 * 24));
+
+    let ddayText, ddayClass;
+    if (diff === 0) { ddayText = 'D-DAY'; ddayClass = 'is-today'; }
+    else if (diff > 0 && diff <= 7) { ddayText = `D-${diff}`; ddayClass = 'is-near'; }
+    else if (diff > 7 && diff <= 30) { ddayText = `D-${diff}`; ddayClass = 'is-soon'; }
+    else if (diff > 30) { ddayText = `D-${diff}`; ddayClass = 'is-far'; }
+    else { ddayText = `D+${Math.abs(diff)}`; ddayClass = 'is-far'; }
+
+    const dateStr = `${start.getMonth() + 1}월 ${start.getDate()}일`;
+    const dateSubStr = start.getTime() !== end.getTime()
+      ? `~ ${end.getMonth() + 1}/${end.getDate()}`
+      : start.toLocaleDateString('ko-KR', { weekday: 'short' });
+
+    const catLabel = { exam: '시험', academic: '학사', edu: '교육주간', holiday: '공휴일', marketing: '마케팅' }[ev.category] || ev.category;
+
+    item.innerHTML = `
+      <div>
+        <div class="upcoming-date">${dateStr}</div>
+        <div class="upcoming-date-sub">${dateSubStr}</div>
+      </div>
+      <div class="upcoming-body">
+        <div class="upcoming-title">${escapeHtml(ev.title)}</div>
+        ${ev.description ? `<div class="upcoming-desc">${escapeHtml(ev.description)}</div>` : ''}
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+        <span class="upcoming-dday ${ddayClass}">${ddayText}</span>
+        <span class="upcoming-cat cat-${ev.category}">${catLabel}</span>
+      </div>
+    `;
+    group.appendChild(item);
+  });
+
+  return group;
 }
 
 function renderGrid(items) {
