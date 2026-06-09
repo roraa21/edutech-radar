@@ -1095,6 +1095,16 @@ body > *:not(.bg-blobs) { position: relative; z-index: 1; }
    학사일정 캘린더
    ============================================ */
 
+/* 캘린더 모드일 때 부모 .feed grid 무효화 */
+.feed.cal-wrap {
+  display: block !important;
+  grid-template-columns: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  max-width: none !important;
+  gap: 0 !important;
+}
+
 /* 카테고리 컬러 */
 :root[data-theme="light"] {
   --cat-exam:      #c93838;
