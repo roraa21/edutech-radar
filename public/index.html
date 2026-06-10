@@ -82,7 +82,7 @@
         <div class="stat-label">전체 콘텐츠</div>
       </div>
       <div class="stat">
-        <div class="stat-num">19</div>
+        <div class="stat-num">22</div>
         <div class="stat-label">뉴스 키워드</div>
       </div>
       <div class="stat">
@@ -144,6 +144,16 @@
   </div>
 </section>
 
+<!-- ===== 콘텐츠 구분 탭 (교과서/교재/AIDT) ===== -->
+<section class="cat-tabs" aria-label="콘텐츠 구분">
+  <div class="cat-tabs-inner" id="catTabs">
+    <button class="cat-tab is-active" data-cat="all">전체</button>
+    <button class="cat-tab" data-cat="textbook">교과서</button>
+    <button class="cat-tab" data-cat="workbook">교재</button>
+    <button class="cat-tab" data-cat="aidt">AIDT</button>
+  </div>
+</section>
+
 <!-- ===== 소스 탭 ===== -->
 <section class="source-tabs" aria-label="소스 선택">
   <div class="tabs-inner" id="sourceTabs">
@@ -179,6 +189,24 @@
       <div class="chip-row" id="sortGroup">
         <button class="chip is-active" data-sort="date">최신순</button>
         <button class="chip" data-sort="popular">인기순</button>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">기간</div>
+      <div class="chip-row" id="periodGroup">
+        <button class="chip is-active" data-period="all">전체</button>
+        <button class="chip" data-period="week">주별</button>
+        <button class="chip" data-period="month">월별</button>
+      </div>
+      <div class="period-nav" id="periodNav" hidden>
+        <button class="period-nav-btn" id="periodPrev" aria-label="이전">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="period-label" id="periodLabel">—</span>
+        <button class="period-nav-btn" id="periodNext" aria-label="다음">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
     </div>
 
