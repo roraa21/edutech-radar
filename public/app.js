@@ -18,9 +18,14 @@ const state = {
   topic: 'all',
   publisher: 'all',
   view: 'grid',
+  // 콘텐츠 구분 (전체/교과서/교재/AIDT)
+  category: 'all',
+  // 기간 필터
+  period: { unit: 'all', cursor: new Date() },
   // 캘린더 전용 state
   calView: 'month', // 'month' | 'upcoming'
   calCursor: null,  // 현재 보고 있는 월의 첫째 날
+  calInsights: {},  // 월별 포스팅 주제/키워드
 };
 
 // ===== Mock Data =====
@@ -63,6 +68,12 @@ const els = {
   statCount: document.getElementById('statCount'),
   statusBar: document.getElementById('statusBar'),
   sourceTabs: document.getElementById('sourceTabs'),
+  catTabs: document.getElementById('catTabs'),
+  periodGroup: document.getElementById('periodGroup'),
+  periodNav: document.getElementById('periodNav'),
+  periodLabel: document.getElementById('periodLabel'),
+  periodPrev: document.getElementById('periodPrev'),
+  periodNext: document.getElementById('periodNext'),
   countNews: document.getElementById('countNews'),
   countYoutube: document.getElementById('countYoutube'),
   countBlog: document.getElementById('countBlog'),
@@ -118,6 +129,7 @@ async function loadAllData() {
   state.data.youtube = (ytR.value && ytR.value.items) || MOCK_YOUTUBE;
   state.data.blog    = (blogR.value && blogR.value.items) || MOCK_BLOG;
   state.data.calendar = (calR.value && calR.value.events) || [];
+  state.calInsights = (calR.value && calR.value.insights) || {};
 
   const now = new Date().toISOString();
   state.updatedAt.news    = (newsR.value && newsR.value.updatedAt) || now;
@@ -137,7 +149,7 @@ async function loadCalendar() {
     const res = await fetch(API_CALENDAR);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    return { events: data.events || [], updatedAt: data.updatedAt };
+    return { events: data.events || [], insights: data.insights || {}, updatedAt: data.updatedAt };
   } catch (err) {
     // 캘린더는 API 실패 시 빈 배열 (mock 안 씀)
     console.warn('Calendar API 실패:', err.message);
@@ -209,6 +221,27 @@ function bindControls() {
   bindChipGroup(els.topicGroup, 'data-topic', (v) => { state.topic = v; render(); });
   bindChipGroup(els.publisherGroup, 'data-publisher', (v) => { state.publisher = v; render(); });
 
+  // 콘텐츠 구분 탭 (교과서/교재/AIDT)
+  els.catTabs.addEventListener('click', (e) => {
+    const tab = e.target.closest('button.cat-tab');
+    if (!tab) return;
+    els.catTabs.querySelectorAll('button.cat-tab').forEach(b => b.classList.remove('is-active'));
+    tab.classList.add('is-active');
+    state.category = tab.getAttribute('data-cat');
+    render();
+  });
+
+  // 기간 필터
+  bindChipGroup(els.periodGroup, 'data-period', (v) => {
+    state.period.unit = v;
+    state.period.cursor = new Date();
+    els.periodNav.hidden = (v === 'all');
+    updatePeriodLabel();
+    render();
+  });
+  els.periodPrev.addEventListener('click', () => { shiftPeriod(-1); });
+  els.periodNext.addEventListener('click', () => { shiftPeriod(1); });
+
   els.viewGrid.addEventListener('click', () => switchView('grid'));
   els.viewWeekly.addEventListener('click', () => switchView('weekly'));
 }
@@ -236,8 +269,69 @@ function getCurrentItems() {
   return state.data[state.source] || [];
 }
 
+// ===== 콘텐츠 구분 분류 (제목/설명 텍스트 기반) =====
+function classifyCategory(item) {
+  const text = `${item.title || ''} ${item.description || ''}`;
+  if (/AIDT|AI\s?디지털\s?교과서|AI\s?디지털\s?교육자료|디지털\s?교과서/i.test(text)) return 'aidt';
+  if (/교과서|검정도서|국정도서/.test(text)) return 'textbook';
+  if (/교재|문제집|참고서|학습지|수능서|단행본|인강/.test(text)) return 'workbook';
+  return 'etc';
+}
+
+// ===== 기간 필터 =====
+function getPeriodRange() {
+  const u = state.period.unit;
+  if (u === 'all') return null;
+  const c = new Date(state.period.cursor);
+  if (u === 'month') {
+    const start = new Date(c.getFullYear(), c.getMonth(), 1);
+    const end = new Date(c.getFullYear(), c.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { start, end };
+  }
+  // week: 일요일 시작
+  const d = new Date(c); d.setHours(0, 0, 0, 0);
+  const start = new Date(d); start.setDate(d.getDate() - d.getDay());
+  const end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function shiftPeriod(dir) {
+  const c = new Date(state.period.cursor);
+  if (state.period.unit === 'month') {
+    state.period.cursor = new Date(c.getFullYear(), c.getMonth() + dir, 1);
+  } else if (state.period.unit === 'week') {
+    c.setDate(c.getDate() + dir * 7);
+    state.period.cursor = c;
+  }
+  updatePeriodLabel();
+  render();
+}
+
+function updatePeriodLabel() {
+  const range = getPeriodRange();
+  if (!range) { els.periodLabel.textContent = '—'; return; }
+  const { start, end } = range;
+  if (state.period.unit === 'month') {
+    els.periodLabel.textContent = `${start.getFullYear()}년 ${start.getMonth() + 1}월`;
+  } else {
+    els.periodLabel.textContent = `${start.getMonth() + 1}/${start.getDate()} ~ ${end.getMonth() + 1}/${end.getDate()}`;
+  }
+}
+
 function getFilteredItems() {
+  const range = getPeriodRange();
   return getCurrentItems().filter((it) => {
+    // 콘텐츠 구분 필터 (교과서/교재/AIDT)
+    if (state.category !== 'all') {
+      if (classifyCategory(it) !== state.category) return false;
+    }
+
+    // 기간 필터
+    if (range) {
+      const ts = it.pubTimestamp || 0;
+      if (ts < range.start.getTime() || ts > range.end.getTime()) return false;
+    }
+
     // 주제 필터 (뉴스에만 적용)
     if (state.source === 'news' && state.topic !== 'all') {
       if (!(it.topics || []).includes(state.topic)) return false;
@@ -395,6 +489,28 @@ function renderCalendarMonth() {
     state.calCursor = new Date(year, month + 1, 1);
     renderCalendar();
   });
+
+  // 월별 인사이트 패널 (포스팅 주제 추천 + 핵심 키워드)
+  const insight = state.calInsights[month + 1];
+  if (insight) {
+    const panel = document.createElement('div');
+    panel.className = 'cal-insight';
+    panel.innerHTML = `
+      <div class="cal-insight-col">
+        <div class="cal-insight-title">📝 ${month + 1}월 포스팅 주제 추천</div>
+        <ul class="cal-insight-topics">
+          ${insight.topics.map(t => `<li>${escapeHtml(t)}</li>`).join('')}
+        </ul>
+      </div>
+      <div class="cal-insight-col">
+        <div class="cal-insight-title">🔑 ${month + 1}월 핵심 키워드</div>
+        <div class="keyword-chips">
+          ${insight.keywords.map(k => `<span class="keyword-chip"># ${escapeHtml(k)}</span>`).join('')}
+        </div>
+      </div>
+    `;
+    els.feed.appendChild(panel);
+  }
 
   const wrap = document.createElement('div');
   wrap.className = 'cal-grid-wrap';
@@ -606,7 +722,8 @@ function renderGrid(items) {
 
 function createNewsCard(item, isFeature) {
   const a = document.createElement('a');
-  a.className = 'card' + (isFeature ? ' is-feature' : '');
+  const hasThumb = !isFeature && item.thumbnail;
+  a.className = 'card' + (isFeature ? ' is-feature' : '') + (hasThumb ? ' has-thumb' : '');
   a.href = item.link;
   a.target = '_blank';
   a.rel = 'noopener noreferrer';
@@ -638,8 +755,22 @@ function createNewsCard(item, isFeature) {
     tags.appendChild(tag);
   });
 
-  a.append(meta, title, desc);
-  if (tags.children.length > 0) a.appendChild(tags);
+  if (hasThumb) {
+    // 썸네일 + 본문 래퍼 구조
+    const thumb = document.createElement('div');
+    thumb.className = 'news-thumb';
+    thumb.innerHTML = `<img src="${escapeHtml(item.thumbnail)}" alt="" loading="lazy" onerror="this.closest('.card').classList.remove('has-thumb'); this.parentElement.remove();"/>`;
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    body.append(meta, title, desc);
+    if (tags.children.length > 0) body.appendChild(tags);
+
+    a.append(thumb, body);
+  } else {
+    a.append(meta, title, desc);
+    if (tags.children.length > 0) a.appendChild(tags);
+  }
   return a;
 }
 
