@@ -15,6 +15,11 @@ const SOURCES = [
   { keyword: '인천시교육청', topic: '교육청', publisher: null },
   { keyword: '대구시교육청', topic: '교육청', publisher: null },
 
+  // 교과서/교재 (구분탭용)
+  { keyword: '검정 교과서', topic: '교과서', publisher: null },
+  { keyword: '교과서 출판', topic: '교과서', publisher: null },
+  { keyword: '문제집 OR 참고서 출판', topic: '교재', publisher: null },
+
   // 출판사
   { keyword: '천재교육', topic: null, publisher: '천재교육' },
   { keyword: '천재교과서', topic: null, publisher: '천재교과서' },
@@ -82,6 +87,36 @@ async function fetchOne(source) {
   }
 }
 
+// 최신 기사 일부의 원문 페이지에서 og:image 썸네일 추출 (best-effort)
+// 주의: Google News 링크는 리다이렉트 페이지라 일부만 성공함
+async function enrichThumbnails(items, max = 12) {
+  const targets = items.slice(0, max);
+  await Promise.all(
+    targets.map(async (it) => {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 2500);
+        const res = await fetch(it.link, {
+          redirect: 'follow',
+          signal: ctrl.signal,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+        });
+        clearTimeout(timer);
+        if (!res.ok) return;
+        const html = await res.text();
+        const m =
+          html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+          html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+        if (m && m[1] && m[1].startsWith('http')) {
+          it.thumbnail = m[1];
+        }
+      } catch (e) {
+        // 실패해도 무시 — 썸네일 없이 표시
+      }
+    })
+  );
+}
+
 exports.handler = async function () {
   try {
     const all = await Promise.all(SOURCES.map(fetchOne));
@@ -104,6 +139,9 @@ exports.handler = async function () {
     }
 
     const merged = Array.from(map.values()).sort((a, b) => b.pubTimestamp - a.pubTimestamp);
+
+    // 최신 12건만 썸네일 시도
+    await enrichThumbnails(merged, 12);
 
     return {
       statusCode: 200,
