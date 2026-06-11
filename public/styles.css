@@ -2073,9 +2073,13 @@ button:focus-visible, a:focus-visible {
   position: fixed;
   bottom: 24px;
   right: 24px;
+  left: 16px;            /* 좁은 화면에서 잘리지 않게 */
+  margin-left: auto;     /* 우측 정렬 유지 */
+  width: auto;
+  max-width: 420px;
+  height: min(580px, calc(100dvh - 100px));
+  max-height: calc(100vh - 100px);
   z-index: 210;
-  width: min(420px, calc(100vw - 32px));
-  height: min(580px, calc(100vh - 100px));
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -2208,5 +2212,5 @@ button:focus-visible, a:focus-visible {
 @media (max-width: 600px) {
   .chat-fab { bottom: 16px; right: 16px; padding: 12px 16px; }
   .chat-fab-label { display: none; }
-  .chat-panel { bottom: 16px; right: 16px; }
+  .chat-panel { bottom: 16px; right: 16px; left: 16px; }
 }
