@@ -64,6 +64,8 @@ const MOCK_BLOG = [
 // 옛 버전의 잔여 탭 마크업을 DOM 요소 캡처 전에 제거
 // 구분법: 진짜 탭은 카운트 뱃지(.tab-count)가 있고, 유령은 없음
 (function removeGhostTabs() {
+  // 0) 옛 "채널 탭" 섹션 (.channels) 직접 제거 — 확인된 유령 마크업
+  document.querySelectorAll('.channels').forEach((el) => el.remove());
   // 1) .source-tabs 클래스를 쓰는 옛 복사본 중 카운트 없는 것 제거
   document.querySelectorAll('.source-tabs').forEach((sec) => {
     if (!sec.querySelector('.tab-count')) sec.remove();
