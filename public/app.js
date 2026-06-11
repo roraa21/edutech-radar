@@ -60,6 +60,27 @@ const MOCK_BLOG = [
   { id: 'b6', type: 'blog', title: '[천재교과서] 티셀파 새 학기 자료 업데이트 안내', link: '#', pubTimestamp: Date.now() - 1000*60*60*80, description: '교수학습 무료지원 티셀파에 신학기 자료 1,200건이 추가되었습니다.', source: '네이버 블로그', publisher: '천재교과서' },
 ];
 
+// ===== 유령 탭 제거 =====
+// 옛 버전의 잔여 탭 마크업을 DOM 요소 캡처 전에 제거
+// 구분법: 진짜 탭은 카운트 뱃지(.tab-count)가 있고, 유령은 없음
+(function removeGhostTabs() {
+  // 1) .source-tabs 클래스를 쓰는 옛 복사본 중 카운트 없는 것 제거
+  document.querySelectorAll('.source-tabs').forEach((sec) => {
+    if (!sec.querySelector('.tab-count')) sec.remove();
+  });
+  // 2) 클래스가 다른 유령도 텍스트 기반으로 제거
+  const real = Array.from(document.querySelectorAll('.source-tabs')).find(
+    (s) => s.querySelector('.tab-count')
+  );
+  document.querySelectorAll('section, nav, div').forEach((el) => {
+    if (real && (el === real || el.contains(real) || real.contains(el))) return;
+    const t = (el.textContent || '').trim();
+    if (t.includes('공식 채널 영상') && !el.querySelector('.tab-count') && t.length < 200) {
+      el.remove();
+    }
+  });
+})();
+
 const els = {
   feed: document.getElementById('feed'),
   countText: document.getElementById('countText'),
@@ -88,31 +109,10 @@ const els = {
 };
 
 function init() {
-  removeGhostTabs();
   initTheme();
   setTodayDate();
   bindControls();
   loadAllData();
-}
-
-// 옛 버전의 잔여 탭 마크업(유령 탭) 자동 제거
-// — GitHub 파일에 옛 코드가 남아있어도 화면에서 지워버림
-function removeGhostTabs() {
-  const realTabs = document.getElementById('sourceTabs');
-  if (!realTabs) return;
-  document.querySelectorAll('section, nav, div').forEach((el) => {
-    // 진짜 탭 자신이나 그 내부/상위 요소는 건너뜀
-    if (el === realTabs || el.contains(realTabs) || realTabs.contains(el)) return;
-    const t = (el.textContent || '').trim();
-    // "공식 채널 영상" 텍스트가 있는데 진짜 카운트 요소가 없는 작은 블록 = 유령
-    if (
-      t.includes('공식 채널 영상') &&
-      !el.querySelector('#countYoutube') &&
-      t.length < 200
-    ) {
-      el.remove();
-    }
-  });
 }
 
 function setTodayDate() {
