@@ -2073,18 +2073,22 @@ button:focus-visible, a:focus-visible {
 
 /* 채팅 오버레이 (배경 어둡게 + 가운데 정렬) */
 .chat-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 210;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9999;
   background: rgba(15, 20, 16, 0.45);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   display: grid;
   place-items: center;
   padding: 20px;
+  overscroll-behavior: contain;
   animation: overlayIn 0.2s ease;
 }
-.chat-overlay[hidden] { display: none; }
+.chat-overlay[hidden] { display: none !important; }
 @keyframes overlayIn {
   from { opacity: 0; }
   to   { opacity: 1; }
