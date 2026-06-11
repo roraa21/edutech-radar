@@ -6,11 +6,11 @@
 
 // === 출판사별 공식 네이버 블로그 ID (검증된 것만 활성화) ===
 const BLOGS = [
+  { publisher: '비상교육', blogId: 'vivasam_official' },
   { publisher: '천재교육', blogId: 'storychunjae' },
   { publisher: '지학사',   blogId: 'jihaksa1965' },
   { publisher: '미래엔',   blogId: 'mirae-n' },
   // 아래는 미확인 — 정확한 블로그 ID 확인 후 주석 해제하세요
-  // { publisher: '비상교육', blogId: '???' },
   // { publisher: '아이스크림미디어', blogId: '???' },
   // { publisher: 'YBM', blogId: '???' },
   // { publisher: '동아출판', blogId: '???' },

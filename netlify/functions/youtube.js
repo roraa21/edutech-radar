@@ -6,6 +6,7 @@
 
 // === 출판사별 공식 유튜브 핸들 (검증된 실제 채널) ===
 const CHANNELS = [
+  { publisher: '비상교육',         handle: 'vivasam_official' },
   { publisher: '천재교육',         handle: 'chunjaeworld' },
   { publisher: '천재교과서',       handle: 'chunjaetext' },
   { publisher: '아이스크림미디어', handle: 'iScreammedia' },
