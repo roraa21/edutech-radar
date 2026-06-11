@@ -188,6 +188,8 @@ function updateTabCounts() {
   els.countYoutube.textContent = state.data.youtube.length;
   els.countBlog.textContent = state.data.blog.length;
   if (els.countCalendar) els.countCalendar.textContent = state.data.calendar.length;
+  const evCount = document.getElementById('countEvents');
+  if (evCount) evCount.textContent = loadEvents().length;
 }
 
 function bindControls() {
@@ -204,12 +206,12 @@ function bindControls() {
       b.classList.toggle('is-active', i === 0);
     });
 
-    // 캘린더 탭이면 정렬/필터/뷰 컨트롤 숨기기
-    const isCalendar = source === 'calendar';
-    document.querySelector('.controls').style.display = isCalendar ? 'none' : '';
+    // 캘린더/이벤트 탭이면 정렬/필터/뷰 컨트롤 숨기기
+    const hideControls = source === 'calendar' || source === 'events';
+    document.querySelector('.controls').style.display = hideControls ? 'none' : '';
 
     // 캘린더 탭으로 들어가면 cursor를 오늘 기준으로
-    if (isCalendar) {
+    if (source === 'calendar') {
       const today = new Date();
       state.calCursor = new Date(today.getFullYear(), today.getMonth(), 1);
     }
@@ -379,6 +381,11 @@ function render() {
   // 캘린더는 별도 렌더 흐름
   if (state.source === 'calendar') {
     renderCalendar();
+    return;
+  }
+  // 이벤트 분석 탭도 별도 렌더 흐름
+  if (state.source === 'events') {
+    renderEvents();
     return;
   }
 
@@ -932,4 +939,338 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// ============================================
+// 이벤트 분석 탭 (이미지 업로드 + AI 분석)
+// ============================================
+const EVENTS_KEY = 'edutech-radar-events';
+
+function loadEvents() {
+  try {
+    return JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]');
+  } catch (e) { return []; }
+}
+
+function saveEvents(events) {
+  try {
+    localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
+    return true;
+  } catch (e) {
+    alert('저장 공간이 가득 찼어요. 오래된 분석을 삭제해주세요.');
+    return false;
+  }
+}
+
+function renderEvents() {
+  els.feed.className = 'feed events-wrap';
+  els.feed.innerHTML = '';
+
+  const events = loadEvents();
+  els.countText.textContent = `${events.length} 건의 분석`;
+  els.updatedText.textContent = '이미지는 내 브라우저에만 저장됩니다';
+
+  const inner = document.createElement('div');
+  inner.className = 'events-inner';
+
+  // 출판사 선택 + 메모
+  const form = document.createElement('div');
+  form.className = 'event-form';
+  form.innerHTML = `
+    <select id="evPublisher">
+      <option value="">출판사 선택 (선택)</option>
+      <option>천재교육</option>
+      <option>천재교과서</option>
+      <option>YBM</option>
+      <option>능률</option>
+      <option>동아</option>
+      <option>아이스크림미디어</option>
+      <option>미래엔</option>
+      <option>금성</option>
+      <option>기타</option>
+    </select>
+    <input type="text" id="evMemo" placeholder="메모 (선택) — 예: 티셀파 3월 이벤트" maxlength="100" />
+  `;
+  inner.appendChild(form);
+
+  // 업로드 영역
+  const upload = document.createElement('div');
+  upload.className = 'event-upload';
+  upload.innerHTML = `
+    <div class="event-upload-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </div>
+    <div class="event-upload-title">경쟁사 이벤트 이미지 업로드</div>
+    <div class="event-upload-desc">클릭하거나 이미지를 드래그하세요 — AI가 자동으로 분석해드려요 (JPG/PNG)</div>
+    <input type="file" id="evFile" accept="image/jpeg,image/png,image/webp" hidden />
+  `;
+  inner.appendChild(upload);
+
+  const fileInput = upload.querySelector('#evFile');
+  upload.addEventListener('click', () => fileInput.click());
+  upload.addEventListener('dragover', (e) => { e.preventDefault(); upload.classList.add('is-dragover'); });
+  upload.addEventListener('dragleave', () => upload.classList.remove('is-dragover'));
+  upload.addEventListener('drop', (e) => {
+    e.preventDefault();
+    upload.classList.remove('is-dragover');
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleEventImage(file, inner);
+  });
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handleEventImage(file, inner);
+    fileInput.value = '';
+  });
+
+  // 저장된 분석 리스트
+  const list = document.createElement('div');
+  list.id = 'eventsList';
+  if (events.length === 0) {
+    list.innerHTML = `<div class="events-empty">아직 분석한 이벤트가 없어요. 위에서 이미지를 올려보세요!</div>`;
+  } else {
+    events.forEach(ev => list.appendChild(createEventCard(ev)));
+  }
+  inner.appendChild(list);
+
+  els.feed.appendChild(inner);
+}
+
+async function handleEventImage(file, container) {
+  if (!file.type.startsWith('image/')) {
+    alert('이미지 파일만 업로드 가능해요.');
+    return;
+  }
+
+  const publisher = container.querySelector('#evPublisher').value;
+  const memo = container.querySelector('#evMemo').value;
+  const list = container.querySelector('#eventsList');
+
+  // 분석 중 표시
+  const loading = document.createElement('div');
+  loading.className = 'event-card';
+  loading.innerHTML = `<div class="event-analyzing"><span class="event-spinner"></span>AI가 이미지를 분석하고 있어요... (10~20초)</div>`;
+  list.prepend(loading);
+
+  try {
+    // 이미지 리사이즈 + base64 변환 (최대 1400px, JPEG 압축)
+    const { base64, dataUrl } = await resizeImage(file, 1400, 0.85);
+    const { base64: thumbB64, dataUrl: thumbUrl } = await resizeImage(file, 480, 0.7);
+
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: base64,
+        mediaType: 'image/jpeg',
+        publisher,
+        memo,
+      }),
+    });
+    const data = await res.json();
+
+    loading.remove();
+
+    if (data.error) {
+      alert('분석 실패: ' + data.error);
+      return;
+    }
+
+    // 저장 (썸네일만 저장해서 용량 절약)
+    const events = loadEvents();
+    const newEvent = {
+      id: 'ev-' + Date.now(),
+      publisher: publisher || '미지정',
+      memo,
+      thumbnail: thumbUrl,
+      analysis: data.analysis,
+      createdAt: new Date().toISOString(),
+    };
+    events.unshift(newEvent);
+    if (saveEvents(events)) {
+      const emptyMsg = list.querySelector('.events-empty');
+      if (emptyMsg) emptyMsg.remove();
+      list.prepend(createEventCard(newEvent));
+      updateTabCounts();
+      els.countText.textContent = `${events.length} 건의 분석`;
+    }
+  } catch (err) {
+    loading.remove();
+    alert('분석 중 오류: ' + err.message);
+  }
+}
+
+function createEventCard(ev) {
+  const card = document.createElement('div');
+  card.className = 'event-card';
+  const dateStr = new Date(ev.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  card.innerHTML = `
+    <div class="event-card-top">
+      <div class="event-card-img">
+        <img src="${ev.thumbnail}" alt="이벤트 이미지" loading="lazy"/>
+      </div>
+      <div class="event-card-body">
+        <div class="event-card-meta">
+          <span class="event-card-publisher">${escapeHtml(ev.publisher)}</span>
+          ${ev.memo ? `<span class="event-card-date">${escapeHtml(ev.memo)}</span>` : ''}
+          <span class="event-card-date">${dateStr}</span>
+          <button class="event-card-delete" aria-label="삭제" data-ev-id="${ev.id}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+        <div class="event-analysis">${escapeHtml(ev.analysis)}</div>
+      </div>
+    </div>
+  `;
+
+  card.querySelector('.event-card-delete').addEventListener('click', () => {
+    if (!confirm('이 분석을 삭제할까요?')) return;
+    const events = loadEvents().filter(e => e.id !== ev.id);
+    saveEvents(events);
+    card.remove();
+    updateTabCounts();
+    els.countText.textContent = `${events.length} 건의 분석`;
+  });
+
+  return card;
+}
+
+function resizeImage(file, maxSize, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxSize || height > maxSize) {
+        const scale = maxSize / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      const base64 = dataUrl.split(',')[1];
+      resolve({ base64, dataUrl });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이미지 로드 실패')); };
+    img.src = url;
+  });
+}
+
+// ============================================
+// AI 인사이트 채팅
+// ============================================
+const chatHistory = [];
+
+function initChat() {
+  const fab = document.getElementById('chatFab');
+  const panel = document.getElementById('chatPanel');
+  const closeBtn = document.getElementById('chatClose');
+  const input = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('chatSend');
+  const messages = document.getElementById('chatMessages');
+
+  if (!fab || !panel) return;
+
+  fab.addEventListener('click', () => {
+    panel.hidden = false;
+    fab.classList.add('is-hidden');
+    input.focus();
+  });
+  closeBtn.addEventListener('click', () => {
+    panel.hidden = true;
+    fab.classList.remove('is-hidden');
+  });
+
+  async function send() {
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    sendBtn.disabled = true;
+
+    // 사용자 메시지 표시
+    appendChatMsg(messages, 'user', question);
+
+    // 로딩 표시
+    const loading = document.createElement('div');
+    loading.className = 'chat-msg chat-msg--loading';
+    loading.innerHTML = '<span class="event-spinner"></span>분석 중...';
+    messages.appendChild(loading);
+    messages.scrollTop = messages.scrollHeight;
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          context: buildChatContext(),
+          history: chatHistory,
+        }),
+      });
+      const data = await res.json();
+      loading.remove();
+
+      if (data.error) {
+        appendChatMsg(messages, 'ai', '⚠️ ' + data.error);
+      } else {
+        appendChatMsg(messages, 'ai', data.answer);
+        chatHistory.push({ role: 'user', content: question });
+        chatHistory.push({ role: 'assistant', content: data.answer });
+        // 히스토리 너무 길어지면 정리
+        if (chatHistory.length > 12) chatHistory.splice(0, chatHistory.length - 12);
+      }
+    } catch (err) {
+      loading.remove();
+      appendChatMsg(messages, 'ai', '⚠️ 연결 오류: ' + err.message);
+    }
+    sendBtn.disabled = false;
+    input.focus();
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing) send();
+  });
+}
+
+function appendChatMsg(container, role, text) {
+  const msg = document.createElement('div');
+  msg.className = 'chat-msg ' + (role === 'user' ? 'chat-msg--user' : 'chat-msg--ai');
+  msg.textContent = text;
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+// 수집 데이터를 AI 컨텍스트로 압축 (제목+출처+날짜)
+function buildChatContext() {
+  const lines = [];
+
+  const fmt = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  };
+
+  lines.push('=== 뉴스 (최신순) ===');
+  state.data.news.slice(0, 40).forEach(it => {
+    const pubs = (it.publishers || []).join(',');
+    lines.push(`[${fmt(it.pubTimestamp)}] ${it.title} (${it.source}${pubs ? ' / ' + pubs : ''})`);
+  });
+
+  lines.push('\n=== 유튜브 ===');
+  state.data.youtube.slice(0, 15).forEach(it => {
+    lines.push(`[${fmt(it.pubTimestamp)}] ${it.title} (${it.publisher || ''})`);
+  });
+
+  lines.push('\n=== 블로그 ===');
+  state.data.blog.slice(0, 15).forEach(it => {
+    lines.push(`[${fmt(it.pubTimestamp)}] ${it.title} (${it.publisher || ''})`);
+  });
+
+  return lines.join('\n').slice(0, 12000); // 컨텍스트 길이 제한
+}
+
 init();
+initChat();
