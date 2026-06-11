@@ -1165,25 +1165,30 @@ const chatHistory = [];
 
 function initChat() {
   const fab = document.getElementById('chatFab');
+  const overlay = document.getElementById('chatOverlay');
   const panel = document.getElementById('chatPanel');
   const closeBtn = document.getElementById('chatClose');
   const input = document.getElementById('chatInput');
   const sendBtn = document.getElementById('chatSend');
   const messages = document.getElementById('chatMessages');
 
-  if (!fab || !panel) return;
+  if (!fab || !overlay) return;
+
+  const open = () => { overlay.hidden = false; input.focus(); };
+  const close = () => { overlay.hidden = true; };
 
   fab.addEventListener('click', () => {
-    // 토글 방식: 열려있으면 닫고, 닫혀있으면 열기
-    if (panel.hidden) {
-      panel.hidden = false;
-      input.focus();
-    } else {
-      panel.hidden = true;
-    }
+    if (overlay.hidden) open();
+    else close();
   });
-  closeBtn.addEventListener('click', () => {
-    panel.hidden = true;
+  closeBtn.addEventListener('click', close);
+  // 패널 바깥(어두운 영역) 클릭 시 닫기
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+  // ESC 키로 닫기
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.hidden) close();
   });
 
   async function send() {
