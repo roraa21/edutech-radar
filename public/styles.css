@@ -350,7 +350,7 @@ body > *:not(.bg-blobs) { position: relative; z-index: 1; }
 .hero-desc {
   font-size: clamp(15px, 1.6vw, 18px);
   color: var(--text-soft);
-  max-width: 520px;
+  max-width: none;
   line-height: 1.55;
   margin-bottom: 40px;
 }
