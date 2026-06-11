@@ -1,19 +1,20 @@
 // netlify/functions/blog.js
 // 네이버 블로그 공식 RSS로 경쟁사 블로그 신규 포스트 수집
-// 네이버 블로그는 blog.naver.com/<ID>/rss 형태로 무료 RSS 제공
+// 네이버 블로그는 rss.blog.naver.com/<ID>.xml 형태로 무료 RSS 제공
 //
-// 환경변수 불필요 (네이버 공식 RSS는 공개)
+// 환경변수 불필요
 
-// === 출판사별 공식 네이버 블로그 ID ===
+// === 출판사별 공식 네이버 블로그 ID (검증된 것만 활성화) ===
 const BLOGS = [
-  { publisher: '천재교육',        blogId: 'chunjae_jr' },
-  { publisher: '천재교과서',      blogId: 'chunjaegyogwa' },
-  { publisher: '비상교육',        blogId: 'visangkr' },
-  { publisher: '아이스크림미디어', blogId: 'i_screammedia' },
-  { publisher: '미래엔',          blogId: 'mirae_n' },
-  { publisher: 'YBM교육',         blogId: 'ybmtory' },
-  { publisher: 'NE능률',          blogId: 'ne_neungyule' },
-  { publisher: '동아출판',        blogId: 'donga_book' },
+  { publisher: '천재교육', blogId: 'storychunjae' },
+  { publisher: '지학사',   blogId: 'jihaksa1965' },
+  { publisher: '미래엔',   blogId: 'mirae-n' },
+  // 아래는 미확인 — 정확한 블로그 ID 확인 후 주석 해제하세요
+  // { publisher: '비상교육', blogId: '???' },
+  // { publisher: '아이스크림미디어', blogId: '???' },
+  // { publisher: 'YBM', blogId: '???' },
+  // { publisher: '동아출판', blogId: '???' },
+  // { publisher: '능률', blogId: '???' },
 ];
 
 function parseRSS(xml, meta) {
@@ -27,19 +28,24 @@ function parseRSS(xml, meta) {
     const get = (tag) => {
       const m = block.match(fieldRegex(tag));
       if (!m) return '';
-      return m[1]
+      let v = m[1]
         .replace(/<!\[CDATA\[/g, '')
-        .replace(/\]\]>/g, '')
-        .replace(/<[^>]+>/g, '')
-        .trim();
+        .replace(/\]\]>/g, '');
+      v = v
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&');
+      return v.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     };
 
     const title = get('title');
     const link = get('link');
     const pubDate = get('pubDate');
     let description = get('description');
-    // 네이버 블로그 description은 HTML이 섞여있어서 정리
-    description = description.replace(/\s+/g, ' ').slice(0, 200);
+    description = description.slice(0, 200);
 
     if (!title || !link) continue;
 
@@ -69,7 +75,7 @@ async function fetchBlog(blog) {
       return [];
     }
     const xml = await res.text();
-    return parseRSS(xml, blog).slice(0, 5); // 최근 5개만
+    return parseRSS(xml, blog).slice(0, 8); // 최근 8개
   } catch (err) {
     console.error(`[${blog.publisher}] ${err.message}`);
     return [];

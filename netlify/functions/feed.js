@@ -30,7 +30,24 @@ const SOURCES = [
   { keyword: '비상교육', topic: null, publisher: '비상교육' },
   { keyword: '미래엔', topic: null, publisher: '미래엔' },
   { keyword: '금성출판사', topic: null, publisher: '금성' },
+  { keyword: '대교 교육', topic: null, publisher: '대교' },
+  { keyword: '지학사', topic: null, publisher: '지학사' },
 ];
+
+// ===== 제외 키워드 (제목에 포함되면 수집 제외) =====
+// 증권/주식 기사 등 동향 모니터링과 무관한 기사 필터링
+// 필요에 따라 자유롭게 추가/삭제하세요
+const EXCLUDE_KEYWORDS = [
+  '주가', '주식', '증권', '코스피', '코스닥',
+  '상한가', '하한가', '시가총액', '공모주', 'IPO',
+  '배당', '목표주가', '특징주', 'VI 발동', '투자의견',
+  '급등주', '테마주', '매수세', '매도세', '52주',
+];
+
+function isExcluded(item) {
+  const text = `${item.title || ''}`;
+  return EXCLUDE_KEYWORDS.some((kw) => text.includes(kw));
+}
 
 function parseRSS(xml, meta) {
   const items = [];
@@ -156,7 +173,9 @@ exports.handler = async function () {
       }
     }
 
-    const merged = Array.from(map.values()).sort((a, b) => b.pubTimestamp - a.pubTimestamp);
+    const merged = Array.from(map.values())
+      .filter((item) => !isExcluded(item))
+      .sort((a, b) => b.pubTimestamp - a.pubTimestamp);
 
     // 최신 12건만 썸네일 시도
     await enrichThumbnails(merged, 12);

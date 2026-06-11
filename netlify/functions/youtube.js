@@ -1,40 +1,40 @@
 // netlify/functions/youtube.js
 // YouTube Data API v3로 경쟁사 공식 채널 최신 영상 수집
+// 채널 "핸들"(@아이디)로 직접 조회 — 채널 ID 추정 불필요
 //
 // 필요한 환경변수: YOUTUBE_API_KEY
-// 발급: https://console.cloud.google.com → APIs & Services → Credentials → Create API key
-//       YouTube Data API v3 활성화 필수
-//
-// 무료 할당량: 일 10,000 units (이 함수 1회 실행 ≈ 9 channels × 4 units = 약 36 units)
 
-// === 출판사별 공식 유튜브 채널 ID ===
-// 채널 ID는 youtube.com/channel/UCxxxx 형태의 URL에서 추출
+// === 출판사별 공식 유튜브 핸들 (검증된 실제 채널) ===
 const CHANNELS = [
-  { publisher: '천재교육',         channelId: 'UCMd8Fmb9t8bTr11E2F8QxEA' },
-  { publisher: '천재교과서',       channelId: 'UCn0ozSrU84ltPtW-YNj-VXA' },
-  { publisher: '비상교육',         channelId: 'UCq49HiinMnjo6zv54smrq2g' },
-  { publisher: '아이스크림미디어', channelId: 'UCxKj9zG9eYNVqxV8tEf9Tig' }, // i-screammedia 핸들
-  { publisher: '미래엔',           channelId: 'UC6yJU1KrUNRTwHF7uEpqfMA' }, // @miraen_official 추정
-  { publisher: 'YBM교육',          channelId: 'UCRYTvasDJe1ybSa2bamqtyg' },
-  { publisher: 'NE능률',           channelId: 'UCDfbGyVKtFD-XaTrXKowR5w' }, // @Neungyule 추정
-  // 동아출판은 공식 채널이 명확하지 않아 제외 — 확인되면 추가
+  { publisher: '천재교육',         handle: 'chunjaeworld' },
+  { publisher: '천재교과서',       handle: 'chunjaetext' },
+  { publisher: '아이스크림미디어', handle: 'iScreammedia' },
+  { publisher: '미래엔',           handle: 'miraen_official' },
+  { publisher: '대교',             handle: '대교교과서-t2d' },
+  { publisher: '지학사',           handle: 'jihaksa1965' },
+  { publisher: '동아출판',         handle: 'DongaTV' },
+  { publisher: '능률',             handle: 'Neungyule' },
+  { publisher: '능률',             handle: 'NETeacher' },
+  { publisher: '금성',             handle: 'purunet_tv' },
 ];
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3';
 
-async function fetchLatestVideos(channelId, apiKey, maxResults = 5) {
-  // channels.list로 uploads playlist ID 얻기 (1 unit)
+async function fetchLatestVideos(handle, apiKey, maxResults = 5) {
+  // forHandle로 채널 조회 (핸들 → 채널 정보)
   const chRes = await fetch(
-    `${API_BASE}/channels?part=contentDetails,snippet&id=${channelId}&key=${apiKey}`
+    `${API_BASE}/channels?part=contentDetails,snippet&forHandle=${encodeURIComponent(handle)}&key=${apiKey}`
   );
   if (!chRes.ok) throw new Error(`channels API ${chRes.status}`);
   const chData = await chRes.json();
-  if (!chData.items || chData.items.length === 0) return { channelTitle: null, videos: [] };
+  if (!chData.items || chData.items.length === 0) {
+    console.warn(`핸들 @${handle} 채널을 찾을 수 없음`);
+    return { channelTitle: null, videos: [] };
+  }
 
   const channelTitle = chData.items[0].snippet.title;
   const uploadsPlaylistId = chData.items[0].contentDetails.relatedPlaylists.uploads;
 
-  // playlistItems.list로 최근 영상 (1 unit)
   const plRes = await fetch(
     `${API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=${maxResults}&key=${apiKey}`
   );
@@ -76,7 +76,7 @@ exports.handler = async function () {
     const results = await Promise.all(
       CHANNELS.map(async (ch) => {
         try {
-          const { videos } = await fetchLatestVideos(ch.channelId, apiKey, 5);
+          const { videos } = await fetchLatestVideos(ch.handle, apiKey, 5);
           return videos.map((v) => ({
             id: v.videoId,
             title: v.title,
@@ -90,7 +90,7 @@ exports.handler = async function () {
             type: 'youtube',
           }));
         } catch (err) {
-          console.error(`[${ch.publisher}] ${err.message}`);
+          console.error(`[${ch.publisher} @${ch.handle}] ${err.message}`);
           return [];
         }
       })
