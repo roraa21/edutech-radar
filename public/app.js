@@ -1174,8 +1174,15 @@ function initChat() {
 
   if (!fab || !overlay) return;
 
-  const open = () => { overlay.hidden = false; input.focus(); };
-  const close = () => { overlay.hidden = true; };
+  const open = () => {
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';      // 배경 스크롤 잠금
+    input.focus({ preventScroll: true });          // 포커스 시 스크롤 점프 방지
+  };
+  const close = () => {
+    overlay.hidden = true;
+    document.body.style.overflow = '';             // 스크롤 복원
+  };
 
   fab.addEventListener('click', () => {
     if (overlay.hidden) open();
