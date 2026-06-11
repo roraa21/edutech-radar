@@ -2228,3 +2228,29 @@ button:focus-visible, a:focus-visible {
 @media (max-width: 600px) {
   .chat-overlay { padding: 12px; }
 }
+
+/* ============================================
+   더 보기 버튼
+   ============================================ */
+.load-more-btn {
+  grid-column: 1 / -1;
+  margin: 24px auto 0;
+  padding: 13px 36px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: -0.01em;
+  display: block;
+}
+.load-more-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+}
+[data-theme="dark"] .load-more-btn:hover { color: var(--accent); }
