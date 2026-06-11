@@ -309,14 +309,12 @@ body > *:not(.bg-blobs) { position: relative; z-index: 1; }
 }
 
 .hero-title {
-  font-size: clamp(40px, 7.5vw, 88px);
+  font-size: clamp(32px, 5.5vw, 64px);
   font-weight: 800;
-  line-height: 1.02;
-  letter-spacing: -0.045em;
-  margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  margin-bottom: 18px;
+  display: block;
 }
 
 .hero-accent {
@@ -2306,4 +2304,104 @@ button:focus-visible, a:focus-visible {
 /* 유령 "채널 탭" 섹션 완전 숨김 (옛 마크업 잔재) */
 .channels {
   display: none !important;
+}
+
+/* ============================================
+   인스타그램 탭 — 공식 계정 바로가기
+   ============================================ */
+.feed.insta-wrap {
+  display: block !important;
+  grid-template-columns: none !important;
+  gap: 0 !important;
+}
+
+.insta-inner {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 8px clamp(20px, 4vw, 40px) 80px;
+}
+
+.insta-notice {
+  font-size: 13.5px;
+  color: var(--text-soft);
+  line-height: 1.6;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+}
+
+.insta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.insta-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.insta-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: #d6249f;
+}
+
+.insta-avatar {
+  width: 46px; height: 46px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(45deg, #f9ce34, #ee2a7b 50%, #6228d7);
+}
+
+.insta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.insta-service {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.015em;
+}
+.insta-meta {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.insta-pub {
+  font-weight: 600;
+  color: var(--c-violet);
+}
+
+.insta-arrow {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  transition: all 0.2s;
+}
+.insta-card:hover .insta-arrow {
+  color: #d6249f;
+  transform: translate(2px, -2px);
+}
+
+@media (max-width: 640px) {
+  .insta-grid { grid-template-columns: 1fr; }
 }
