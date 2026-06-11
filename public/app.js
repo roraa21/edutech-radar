@@ -713,7 +713,12 @@ function createUpcomingGroup(title, events, today, mode) {
 function renderGrid(items) {
   els.feed.className = 'feed';
   els.feed.innerHTML = '';
-  items.forEach((item, idx) => {
+
+  const BATCH = 60; // 한 번에 60개씩만 렌더링 (성능)
+  let shown = 0;
+  let moreBtn = null;
+
+  const makeCard = (item, idx) => {
     let card;
     if (state.source === 'youtube' || item.type === 'youtube') {
       card = createVideoCard(item);
@@ -722,9 +727,27 @@ function renderGrid(items) {
     } else {
       card = createNewsCard(item, idx === 0 && state.sort === 'date');
     }
-    card.style.animationDelay = `${Math.min(idx, 12) * 0.04}s`;
-    els.feed.appendChild(card);
-  });
+    card.style.animationDelay = `${Math.min(idx - shown, 12) * 0.04}s`;
+    return card;
+  };
+
+  const renderBatch = () => {
+    if (moreBtn) { moreBtn.remove(); moreBtn = null; }
+    const slice = items.slice(shown, shown + BATCH);
+    slice.forEach((item, i) => {
+      els.feed.appendChild(makeCard(item, shown + i));
+    });
+    shown += slice.length;
+    if (shown < items.length) {
+      moreBtn = document.createElement('button');
+      moreBtn.className = 'load-more-btn';
+      moreBtn.textContent = `더 보기 (${(items.length - shown).toLocaleString()}건 남음)`;
+      moreBtn.addEventListener('click', renderBatch);
+      els.feed.appendChild(moreBtn);
+    }
+  };
+
+  renderBatch();
 }
 
 function createNewsCard(item, isFeature) {
