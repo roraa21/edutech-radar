@@ -1174,13 +1174,16 @@ function initChat() {
   if (!fab || !panel) return;
 
   fab.addEventListener('click', () => {
-    panel.hidden = false;
-    fab.classList.add('is-hidden');
-    input.focus();
+    // 토글 방식: 열려있으면 닫고, 닫혀있으면 열기
+    if (panel.hidden) {
+      panel.hidden = false;
+      input.focus();
+    } else {
+      panel.hidden = true;
+    }
   });
   closeBtn.addEventListener('click', () => {
     panel.hidden = true;
-    fab.classList.remove('is-hidden');
   });
 
   async function send() {
