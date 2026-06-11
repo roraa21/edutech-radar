@@ -104,6 +104,7 @@ const els = {
   sortGroup: document.getElementById('sortGroup'),
   topicGroup: document.getElementById('topicGroup'),
   publisherGroup: document.getElementById('publisherGroup'),
+  materialGroup: document.getElementById('materialGroup'),
   viewGrid: document.getElementById('viewGrid'),
   viewWeekly: document.getElementById('viewWeekly'),
   themeToggle: document.getElementById('themeToggle'),
@@ -246,7 +247,20 @@ function bindControls() {
 
   bindChipGroup(els.sortGroup, 'data-sort', (v) => { state.sort = v; render(); });
   bindChipGroup(els.topicGroup, 'data-topic', (v) => { state.topic = v; render(); });
-  bindChipGroup(els.publisherGroup, 'data-publisher', (v) => { state.publisher = v; render(); });
+  // 출판사 + 교수학습자료: 두 그룹이 하나의 필터 공유 (한쪽 선택 시 다른 쪽 해제)
+  const pubGroups = [els.publisherGroup, els.materialGroup].filter(Boolean);
+  pubGroups.forEach((group) => {
+    group.addEventListener('click', (e) => {
+      const chip = e.target.closest('button.chip');
+      if (!chip) return;
+      pubGroups.forEach((g) =>
+        g.querySelectorAll('button.chip').forEach((b) => b.classList.remove('is-active'))
+      );
+      chip.classList.add('is-active');
+      state.publisher = chip.getAttribute('data-publisher');
+      render();
+    });
+  });
 
   // 콘텐츠 구분 탭 (교과서/교재/AIDT)
   els.catTabs.addEventListener('click', (e) => {
@@ -345,6 +359,16 @@ function updatePeriodLabel() {
   }
 }
 
+// ===== 출판사/서비스 별칭 — 일반명사 오탐 방지 =====
+// 칩 값 → 기사 텍스트에서 실제로 찾을 문자열들
+const PUBLISHER_ALIASES = {
+  '아이스크림': ['아이스크림미디어', '아이스크림에듀', '아이스크림 홈런', 'i-Scream'],
+  '동아출판': ['동아출판'],
+  '티셀파': ['티셀파', 'T셀파'],
+  'Y클라우드': ['Y클라우드', '와이클라우드'],
+  '능률': ['능률교육', 'NE능률', '능률 교과서'],
+};
+
 function getFilteredItems() {
   const range = getPeriodRange();
   return getCurrentItems().filter((it) => {
@@ -364,21 +388,22 @@ function getFilteredItems() {
       if (!(it.topics || []).includes(state.topic)) return false;
     }
 
-    // 출판사 필터 (모든 소스에 부분 매칭으로 통일)
+    // 출판사/교수학습자료 필터
     if (state.publisher !== 'all') {
       const allPublishers = [
         ...(it.publishers || []),
         ...(it.publisher ? [it.publisher] : []),
       ];
-      // 1) 데이터의 publisher 값 부분 매칭
+      // 1) 데이터의 publisher 태그 부분 매칭
       let matched = allPublishers.some(p => {
         if (!p) return false;
         return p.includes(state.publisher) || state.publisher.includes(p);
       });
-      // 2) 매칭 안되면 — 기사 제목/설명에 출판사명이 있는지 확인 (뉴스에 특히 유용)
+      // 2) 매칭 안되면 — 기사 제목/설명에서 별칭으로 확인 (일반명사 오탐 방지)
       if (!matched) {
         const haystack = `${it.title || ''} ${it.description || ''}`;
-        if (haystack.includes(state.publisher)) matched = true;
+        const aliases = PUBLISHER_ALIASES[state.publisher] || [state.publisher];
+        matched = aliases.some(a => haystack.includes(a));
       }
       if (!matched) return false;
     }

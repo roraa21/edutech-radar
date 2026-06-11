@@ -309,12 +309,16 @@ body > *:not(.bg-blobs) { position: relative; z-index: 1; }
 }
 
 .hero-title {
-  font-size: clamp(32px, 5.5vw, 64px);
+  font-size: clamp(28px, 4.6vw, 56px);
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.04em;
   margin-bottom: 18px;
   display: block;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .hero-title { white-space: normal; }
 }
 
 .hero-accent {

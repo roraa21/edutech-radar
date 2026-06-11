@@ -11,12 +11,10 @@ const CHANNELS = [
   { publisher: '천재교과서',       handle: 'chunjaetext' },
   { publisher: '아이스크림미디어', handle: 'iScreammedia' },
   { publisher: '미래엔',           handle: 'miraen_official' },
-  { publisher: '대교',             handle: '대교교과서-t2d' },
   { publisher: '지학사',           handle: 'jihaksa1965' },
   { publisher: '동아출판',         handle: 'DongaTV' },
   { publisher: '능률',             handle: 'Neungyule' },
   { publisher: '능률',             handle: 'NETeacher' },
-  { publisher: '금성',             handle: 'purunet_tv' },
 ];
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3';

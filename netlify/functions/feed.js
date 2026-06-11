@@ -7,13 +7,12 @@ const SOURCES = [
   { keyword: '디지털교과서 정책', topic: '정책', publisher: null },
   { keyword: '교육부 AI', topic: '정책', publisher: null },
 
-  // 교육청 보도자료 (Google News 인덱싱 활용)
+  // 교육청 보도자료 — 17개 시도교육청 전체 (OR 그룹으로 묶어 호출 수 절약)
   { keyword: '교육부 보도자료', topic: '교육청', publisher: null },
-  { keyword: '서울시교육청', topic: '교육청', publisher: null },
-  { keyword: '경기도교육청', topic: '교육청', publisher: null },
-  { keyword: '부산시교육청', topic: '교육청', publisher: null },
-  { keyword: '인천시교육청', topic: '교육청', publisher: null },
-  { keyword: '대구시교육청', topic: '교육청', publisher: null },
+  { keyword: '서울시교육청 OR 경기도교육청 OR 인천시교육청 OR 강원도교육청', topic: '교육청', publisher: null },
+  { keyword: '부산시교육청 OR 대구시교육청 OR 울산시교육청 OR 경북교육청 OR 경남교육청', topic: '교육청', publisher: null },
+  { keyword: '광주시교육청 OR 대전시교육청 OR 세종시교육청 OR 충북교육청 OR 충남교육청', topic: '교육청', publisher: null },
+  { keyword: '전북교육청 OR 전남교육청 OR 제주교육청', topic: '교육청', publisher: null },
 
   // 교과서/교재 (구분탭용)
   { keyword: '검정 교과서', topic: '교과서', publisher: null },
@@ -21,17 +20,24 @@ const SOURCES = [
   { keyword: '문제집 OR 참고서 출판', topic: '교재', publisher: null },
 
   // 출판사
+  { keyword: '비상교육', topic: null, publisher: '비상교육' },
   { keyword: '천재교육', topic: null, publisher: '천재교육' },
   { keyword: '천재교과서', topic: null, publisher: '천재교과서' },
+  { keyword: '동아출판', topic: null, publisher: '동아출판' },
+  { keyword: '미래엔', topic: null, publisher: '미래엔' },
   { keyword: 'YBM 교육', topic: null, publisher: 'YBM' },
   { keyword: '능률교육 OR NE능률', topic: null, publisher: '능률' },
-  { keyword: '동아출판', topic: null, publisher: '동아' },
-  { keyword: '아이스크림미디어', topic: null, publisher: '아이스크림미디어' },
-  { keyword: '비상교육', topic: null, publisher: '비상교육' },
-  { keyword: '미래엔', topic: null, publisher: '미래엔' },
-  { keyword: '금성출판사', topic: null, publisher: '금성' },
-  { keyword: '대교 교육', topic: null, publisher: '대교' },
   { keyword: '지학사', topic: null, publisher: '지학사' },
+  { keyword: '디딤돌교육 OR 디딤돌 교재', topic: null, publisher: '디딤돌' },
+  { keyword: '개념원리', topic: null, publisher: '개념원리' },
+  { keyword: '좋은책신사고', topic: null, publisher: '좋은책신사고' },
+
+  // 교수학습자료 서비스
+  { keyword: '비바샘', topic: null, publisher: '비바샘' },
+  { keyword: '아이스크림미디어 OR 아이스크림에듀', topic: null, publisher: '아이스크림' },
+  { keyword: '티셀파 OR T셀파', topic: null, publisher: '티셀파' },
+  { keyword: '엠티처', topic: null, publisher: '엠티처' },
+  { keyword: '티솔루션', topic: null, publisher: '티솔루션' },
 ];
 
 // ===== 제외 키워드 (제목에 포함되면 수집 제외) =====
@@ -43,6 +49,16 @@ const EXCLUDE_KEYWORDS = [
   '배당', '목표주가', '특징주', 'VI 발동', '투자의견',
   '급등주', '테마주', '매수세', '매도세', '52주',
 ];
+
+// 제목 정규화 — 중복 기사 판별용
+// "기사제목 - 매체명" 형태에서 매체명 떼고, 특수문자/공백 제거 후 앞 30자 비교
+function normalizeTitle(t) {
+  return (t || '')
+    .replace(/\s*-\s*[^-]+$/, '')          // 끝의 " - 매체명" 제거
+    .replace(/[\[\]【】()「」'"“”‘’…·,.!?]/g, '')
+    .replace(/\s+/g, '')
+    .slice(0, 30);
+}
 
 function isExcluded(item) {
   const text = `${item.title || ''}`;
@@ -173,9 +189,19 @@ exports.handler = async function () {
       }
     }
 
-    const merged = Array.from(map.values())
+    let merged = Array.from(map.values())
       .filter((item) => !isExcluded(item))
       .sort((a, b) => b.pubTimestamp - a.pubTimestamp);
+
+    // 제목이 거의 같은 기사(같은 보도자료를 여러 언론사가 받아쓴 경우) 1건만 유지
+    const seenTitles = new Set();
+    merged = merged.filter((item) => {
+      const key = normalizeTitle(item.title);
+      if (!key) return true;
+      if (seenTitles.has(key)) return false;
+      seenTitles.add(key);
+      return true;
+    });
 
     // 최신 12건만 썸네일 시도
     await enrichThumbnails(merged, 12);
