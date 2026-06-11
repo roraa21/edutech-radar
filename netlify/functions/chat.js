@@ -33,7 +33,15 @@ exports.handler = async function (event) {
       return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'question 필요' }) };
     }
 
+    const today = new Date().toLocaleDateString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
+    });
+
     const system = `당신은 한국 교육 출판사 '비상교육'의 플랫폼 마케팅 팀을 돕는 교육 업계 동향 분석 어시스턴트입니다.
+
+오늘 날짜: ${today} (한국 시간 기준)
+데이터의 [월/일] 표기는 해당 콘텐츠의 발행일입니다. "이번 주", "최근" 같은 기간 판단은 반드시 오늘 날짜를 기준으로 계산하세요.
 
 역할:
 - 수집된 뉴스/유튜브/블로그 데이터를 바탕으로 질문에 답합니다
@@ -43,6 +51,7 @@ exports.handler = async function (event) {
 규칙:
 - 한국어로 간결하게 답하세요
 - 제공된 데이터에 근거해서 답하고, 데이터에 없는 내용은 "수집된 데이터에는 없다"고 솔직하게 말하세요
+- 답변하기 전에 날짜 계산을 정확히 하세요. 모순된 답변(예: "최신 뉴스가 없다"면서 최신 뉴스를 제시)을 하지 마세요
 - 마케팅 실무 관점의 시사점을 곁들이면 좋습니다
 - 불필요한 머리말 없이 바로 본론으로 들어가세요
 
