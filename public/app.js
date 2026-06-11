@@ -1220,7 +1220,7 @@ function initChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question,
-          context: buildChatContext(),
+          context: buildChatContext(question),
           history: chatHistory,
         }),
       });
@@ -1258,33 +1258,56 @@ function appendChatMsg(container, role, text) {
   container.scrollTop = container.scrollHeight;
 }
 
-// 수집 데이터를 AI 컨텍스트로 압축 (제목+출처+날짜)
-function buildChatContext() {
-  const lines = [];
-
+// 수집 데이터를 AI 컨텍스트로 압축 — 질문과 관련된 항목 우선 선별
+function buildChatContext(question) {
   const fmt = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
     return `${d.getMonth() + 1}/${d.getDate()}`;
   };
 
-  lines.push('=== 뉴스 (최신순) ===');
-  state.data.news.slice(0, 40).forEach(it => {
+  // 질문에서 2글자 이상 토큰 추출 (조사 등 제거를 위한 단순 분리)
+  const tokens = (question || '')
+    .split(/[\s,.?!'"()\[\]{}~]+/)
+    .map(t => t.trim())
+    .filter(t => t.length >= 2);
+
+  // 항목별 관련도 점수: 질문 토큰이 제목/설명/출판사에 포함되면 가산
+  const scoreItem = (it) => {
+    const text = `${it.title || ''} ${it.description || ''} ${(it.publishers || []).join(' ')} ${it.publisher || ''}`;
+    let score = 0;
+    tokens.forEach(t => { if (text.includes(t)) score += 10; });
+    return score;
+  };
+
+  // 관련도 우선 + 최신순으로 정렬해서 상위 N개 선택
+  const pick = (items, n) => {
+    return [...items]
+      .map(it => ({ it, s: scoreItem(it) }))
+      .sort((a, b) => (b.s - a.s) || ((b.it.pubTimestamp || 0) - (a.it.pubTimestamp || 0)))
+      .slice(0, n)
+      .map(x => x.it);
+  };
+
+  const lines = [];
+
+  lines.push('=== 뉴스 (질문 관련도 + 최신순) ===');
+  pick(state.data.news, 50).forEach(it => {
     const pubs = (it.publishers || []).join(',');
     lines.push(`[${fmt(it.pubTimestamp)}] ${it.title} (${it.source}${pubs ? ' / ' + pubs : ''})`);
   });
 
   lines.push('\n=== 유튜브 ===');
-  state.data.youtube.slice(0, 15).forEach(it => {
+  pick(state.data.youtube, 15).forEach(it => {
     lines.push(`[${fmt(it.pubTimestamp)}] ${it.title} (${it.publisher || ''})`);
   });
 
   lines.push('\n=== 블로그 ===');
-  state.data.blog.slice(0, 15).forEach(it => {
+  pick(state.data.blog, 15).forEach(it => {
     lines.push(`[${fmt(it.pubTimestamp)}] ${it.title} (${it.publisher || ''})`);
   });
 
-  return lines.join('\n').slice(0, 12000); // 컨텍스트 길이 제한
+  return lines.join('\n').slice(0, 14000); // 컨텍스트 길이 제한
 }
 
 init();
