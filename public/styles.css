@@ -2302,3 +2302,8 @@ button:focus-visible, a:focus-visible {
 .source-tabs:not(:has(.tab-count)) {
   display: none !important;
 }
+
+/* 유령 "채널 탭" 섹션 완전 숨김 (옛 마크업 잔재) */
+.channels {
+  display: none !important;
+}
