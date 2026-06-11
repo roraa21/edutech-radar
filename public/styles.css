@@ -2297,3 +2297,8 @@ button:focus-visible, a:focus-visible {
   background: var(--accent-soft);
 }
 [data-theme="dark"] .load-more-btn:hover { color: var(--accent); }
+
+/* 유령 탭 숨김 (카운트 뱃지 없는 옛 탭 마크업) — JS와 이중 안전장치 */
+.source-tabs:not(:has(.tab-count)) {
+  display: none !important;
+}
