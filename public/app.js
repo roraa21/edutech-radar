@@ -216,6 +216,8 @@ function updateTabCounts() {
   if (evCount) evCount.textContent = loadEvents().length;
   const igCount = document.getElementById('countInstagram');
   if (igCount) igCount.textContent = INSTAGRAM_ACCOUNTS.length;
+  const trCount = document.getElementById('countTraining');
+  if (trCount) trCount.textContent = TRAINING_SITES.length;
 }
 
 function bindControls() {
@@ -232,8 +234,8 @@ function bindControls() {
       b.classList.toggle('is-active', i === 0);
     });
 
-    // 캘린더/이벤트/인스타그램 탭이면 정렬/필터/뷰 컨트롤 숨기기
-    const hideControls = source === 'calendar' || source === 'events' || source === 'instagram';
+    // 캘린더/이벤트/인스타그램/연수원 탭이면 정렬/필터/뷰 컨트롤 숨기기
+    const hideControls = source === 'calendar' || source === 'events' || source === 'instagram' || source === 'training';
     document.querySelector('.controls').style.display = hideControls ? 'none' : '';
 
     // 캘린더 탭으로 들어가면 cursor를 오늘 기준으로
@@ -441,6 +443,11 @@ function render() {
   // 인스타그램 탭 — 계정 바로가기 모음
   if (state.source === 'instagram') {
     renderInstagram();
+    return;
+  }
+  // 연수원 탭 — 연수 사이트 바로가기 모음
+  if (state.source === 'training') {
+    renderTraining();
     return;
   }
 
@@ -1062,6 +1069,68 @@ function renderInstagram() {
       <span class="insta-info">
         <span class="insta-service">${escapeHtml(acc.service)}</span>
         <span class="insta-meta"><span class="insta-pub">${escapeHtml(acc.publisher)}</span> · @${escapeHtml(acc.handle)}</span>
+      </span>
+      <span class="insta-arrow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+      </span>
+    `;
+    grid.appendChild(a);
+  });
+
+  inner.appendChild(grid);
+  els.feed.appendChild(inner);
+}
+
+// ============================================
+// 연수원 — 교사 연수 사이트 바로가기
+// ============================================
+const TRAINING_SITES = [
+  { name: '티처빌', url: 'https://www.teacherville.co.kr' },
+  { name: '아이스크림 연수원', url: 'https://teacher.i-scream.co.kr' },
+  { name: '한국교원연수원', url: 'https://www.hstudy.co.kr' },
+  { name: '교육사랑연수원', url: 'https://www.edulove.co.kr/main' },
+  { name: '사제동행', url: 'https://www.education.or.kr' },
+  { name: 'T셀파 연수원', url: 'https://edu.tsherpa.co.kr' },
+  { name: 'YBM 연수원', url: 'https://www.ybmteachers.com' },
+  { name: '교원캠퍼스', url: 'https://www.teacher21.co.kr' },
+  { name: '카운피아', url: 'https://counpia.com' },
+  { name: '에듀니티연수원', url: 'https://happy.eduniety.net' },
+  { name: '창비교육연수원', url: 'https://teacher.changbiedu.com' },
+];
+
+function renderTraining() {
+  els.feed.className = 'feed insta-wrap';
+  els.feed.innerHTML = '';
+
+  els.countText.textContent = `${TRAINING_SITES.length}개 연수원`;
+  els.updatedText.textContent = '클릭하면 연수원 사이트가 새 탭으로 열려요';
+
+  const inner = document.createElement('div');
+  inner.className = 'insta-inner';
+
+  const notice = document.createElement('p');
+  notice.className = 'insta-notice';
+  notice.textContent = '주요 교사 연수 사이트 바로가기예요. 경쟁사 연수 프로그램과 트렌드를 둘러보기 좋아요!';
+  inner.appendChild(notice);
+
+  const grid = document.createElement('div');
+  grid.className = 'insta-grid';
+
+  TRAINING_SITES.forEach((site, idx) => {
+    const domain = site.url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    const a = document.createElement('a');
+    a.className = 'insta-card';
+    a.href = site.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.animationDelay = `${idx * 0.04}s`;
+    a.innerHTML = `
+      <span class="insta-avatar is-training">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      </span>
+      <span class="insta-info">
+        <span class="insta-service">${escapeHtml(site.name)}</span>
+        <span class="insta-meta">${escapeHtml(domain)}</span>
       </span>
       <span class="insta-arrow">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
