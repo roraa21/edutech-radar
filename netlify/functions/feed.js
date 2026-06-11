@@ -43,18 +43,31 @@ function parseRSS(xml, meta) {
     const get = (tag) => {
       const m = block.match(fieldRegex(tag));
       if (!m) return '';
-      return m[1]
+      let v = m[1]
         .replace(/<!\[CDATA\[/g, '')
-        .replace(/\]\]>/g, '')
-        .replace(/<[^>]+>/g, '')
-        .trim();
+        .replace(/\]\]>/g, '');
+      // HTML 엔티티 디코딩 (&lt;a href...&gt; 같은 찌꺼기 제거를 위해)
+      v = v
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&');
+      // 태그 제거
+      return v.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     };
 
     const title = get('title');
     const link = get('link');
     const pubDate = get('pubDate');
-    const description = get('description');
+    let description = get('description');
     const source = get('source');
+
+    // Google News 설명은 제목+출처를 반복하는 경우가 많음 → 중복이면 비움
+    if (description && title && description.includes(title.slice(0, Math.min(20, title.length)))) {
+      description = '';
+    }
 
     if (!title || !link) continue;
 
@@ -103,11 +116,16 @@ async function enrichThumbnails(items, max = 12) {
         });
         clearTimeout(timer);
         if (!res.ok) return;
+        // 리다이렉트 후에도 여전히 구글 페이지면 스킵 (구글 로고가 잡히는 원인)
+        const finalUrl = res.url || '';
+        if (finalUrl.includes('news.google.com') || finalUrl.includes('google.com/url')) return;
         const html = await res.text();
         const m =
           html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
           html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
         if (m && m[1] && m[1].startsWith('http')) {
+          // 구글 계열 이미지(로고 등)는 제외
+          if (/gstatic\.com|googleusercontent\.com|www\.google\.com|news\.google\.com/.test(m[1])) return;
           it.thumbnail = m[1];
         }
       } catch (e) {
