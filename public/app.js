@@ -213,6 +213,8 @@ function updateTabCounts() {
   if (els.countCalendar) els.countCalendar.textContent = state.data.calendar.length;
   const evCount = document.getElementById('countEvents');
   if (evCount) evCount.textContent = loadEvents().length;
+  const igCount = document.getElementById('countInstagram');
+  if (igCount) igCount.textContent = INSTAGRAM_ACCOUNTS.length;
 }
 
 function bindControls() {
@@ -229,8 +231,8 @@ function bindControls() {
       b.classList.toggle('is-active', i === 0);
     });
 
-    // 캘린더/이벤트 탭이면 정렬/필터/뷰 컨트롤 숨기기
-    const hideControls = source === 'calendar' || source === 'events';
+    // 캘린더/이벤트/인스타그램 탭이면 정렬/필터/뷰 컨트롤 숨기기
+    const hideControls = source === 'calendar' || source === 'events' || source === 'instagram';
     document.querySelector('.controls').style.display = hideControls ? 'none' : '';
 
     // 캘린더 탭으로 들어가면 cursor를 오늘 기준으로
@@ -409,6 +411,11 @@ function render() {
   // 이벤트 분석 탭도 별도 렌더 흐름
   if (state.source === 'events') {
     renderEvents();
+    return;
+  }
+  // 인스타그램 탭 — 계정 바로가기 모음
+  if (state.source === 'instagram') {
+    renderInstagram();
     return;
   }
 
@@ -983,6 +990,63 @@ function formatRelativeTime(ts) {
 function escapeHtml(s) {
   if (s == null) return '';
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ============================================
+// 인스타그램 — 경쟁사 공식 계정 바로가기
+// (인스타는 자동 수집 불가 → 링크 모음으로 제공)
+// ============================================
+const INSTAGRAM_ACCOUNTS = [
+  { service: '티솔루션', publisher: '지학사', handle: 'tsolution_official', url: 'https://www.instagram.com/tsolution_official/' },
+  { service: '아이스크림미디어', publisher: '아이스크림', handle: 'i_screammedia_official', url: 'https://www.instagram.com/i_screammedia_official/' },
+  { service: 'Y클라우드', publisher: 'YBM', handle: 'ybm_textbook', url: 'https://www.instagram.com/ybm_textbook/' },
+  { service: 'T셀파', publisher: '천재교육', handle: 'tsherpa_official', url: 'https://www.instagram.com/tsherpa_official/' },
+  { service: '두클래스', publisher: '동아출판', handle: 'donga_douclass', url: 'https://www.instagram.com/donga_douclass/' },
+  { service: '쌤동네 & 티처빌 연수원', publisher: '티처빌', handle: 'teacherville_official', url: 'https://www.instagram.com/teacherville_official/' },
+];
+
+function renderInstagram() {
+  els.feed.className = 'feed insta-wrap';
+  els.feed.innerHTML = '';
+
+  els.countText.textContent = `${INSTAGRAM_ACCOUNTS.length}개 계정`;
+  els.updatedText.textContent = '클릭하면 인스타그램 새 탭으로 열려요';
+
+  const inner = document.createElement('div');
+  inner.className = 'insta-inner';
+
+  const notice = document.createElement('p');
+  notice.className = 'insta-notice';
+  notice.textContent = '인스타그램은 자동 수집이 제한되어, 경쟁사 공식 계정 바로가기로 제공해요. 주 1회 직접 둘러보며 동향을 체크해보세요!';
+  inner.appendChild(notice);
+
+  const grid = document.createElement('div');
+  grid.className = 'insta-grid';
+
+  INSTAGRAM_ACCOUNTS.forEach((acc, idx) => {
+    const a = document.createElement('a');
+    a.className = 'insta-card';
+    a.href = acc.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.animationDelay = `${idx * 0.05}s`;
+    a.innerHTML = `
+      <span class="insta-avatar">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </span>
+      <span class="insta-info">
+        <span class="insta-service">${escapeHtml(acc.service)}</span>
+        <span class="insta-meta"><span class="insta-pub">${escapeHtml(acc.publisher)}</span> · @${escapeHtml(acc.handle)}</span>
+      </span>
+      <span class="insta-arrow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+      </span>
+    `;
+    grid.appendChild(a);
+  });
+
+  inner.appendChild(grid);
+  els.feed.appendChild(inner);
 }
 
 // ============================================
