@@ -88,10 +88,31 @@ const els = {
 };
 
 function init() {
+  removeGhostTabs();
   initTheme();
   setTodayDate();
   bindControls();
   loadAllData();
+}
+
+// 옛 버전의 잔여 탭 마크업(유령 탭) 자동 제거
+// — GitHub 파일에 옛 코드가 남아있어도 화면에서 지워버림
+function removeGhostTabs() {
+  const realTabs = document.getElementById('sourceTabs');
+  if (!realTabs) return;
+  document.querySelectorAll('section, nav, div').forEach((el) => {
+    // 진짜 탭 자신이나 그 내부/상위 요소는 건너뜀
+    if (el === realTabs || el.contains(realTabs) || realTabs.contains(el)) return;
+    const t = (el.textContent || '').trim();
+    // "공식 채널 영상" 텍스트가 있는데 진짜 카운트 요소가 없는 작은 블록 = 유령
+    if (
+      t.includes('공식 채널 영상') &&
+      !el.querySelector('#countYoutube') &&
+      t.length < 200
+    ) {
+      el.remove();
+    }
+  });
 }
 
 function setTodayDate() {
