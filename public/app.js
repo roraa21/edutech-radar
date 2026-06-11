@@ -1263,7 +1263,7 @@ function buildChatContext(question) {
   const fmt = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
-    return `${d.getMonth() + 1}/${d.getDate()}`;
+    return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
   };
 
   // 질문에서 2글자 이상 토큰 추출 (조사 등 제거를 위한 단순 분리)
