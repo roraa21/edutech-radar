@@ -912,7 +912,8 @@ function createVideoCard(item) {
 
 function createBlogCard(item) {
   const a = document.createElement('a');
-  a.className = 'card is-blog';
+  const hasThumb = !!item.thumbnail;
+  a.className = 'card is-blog' + (hasThumb ? ' has-thumb' : '');
   a.href = item.link;
   a.target = '_blank';
   a.rel = 'noopener noreferrer';
@@ -938,8 +939,21 @@ function createBlogCard(item) {
     tags.appendChild(tag);
   }
 
-  a.append(meta, title, desc);
-  if (tags.children.length > 0) a.appendChild(tags);
+  if (hasThumb) {
+    const thumb = document.createElement('div');
+    thumb.className = 'news-thumb';
+    thumb.innerHTML = `<img src="${escapeHtml(item.thumbnail)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.card').classList.remove('has-thumb'); this.parentElement.remove();"/>`;
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    body.append(meta, title, desc);
+    if (tags.children.length > 0) body.appendChild(tags);
+
+    a.append(thumb, body);
+  } else {
+    a.append(meta, title, desc);
+    if (tags.children.length > 0) a.appendChild(tags);
+  }
   return a;
 }
 

@@ -25,27 +25,35 @@ function parseRSS(xml, meta) {
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
     const block = match[1];
-    const get = (tag) => {
+    const dec = (s) => s
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ');
+    // 태그 유지한 원본 (이미지 추출용)
+    const getRaw = (tag) => {
       const m = block.match(fieldRegex(tag));
       if (!m) return '';
       let v = m[1]
         .replace(/<!\[CDATA\[/g, '')
         .replace(/\]\]>/g, '');
-      const dec = (s) => s
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&nbsp;/g, ' ');
-      v = dec(dec(v));
-      return v.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      return dec(dec(v));
     };
+    // 텍스트만 (태그 제거)
+    const get = (tag) => getRaw(tag).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
     const title = get('title');
     const link = get('link');
     const pubDate = get('pubDate');
-    let description = get('description');
+
+    // 본문에서 첫 번째 이미지를 대표 썸네일로 추출
+    const rawDesc = getRaw('description');
+    const imgMatch = rawDesc.match(/<img[^>]+src=["']([^"']+)["']/i);
+    const thumbnail = imgMatch && imgMatch[1].startsWith('http') ? imgMatch[1] : '';
+
+    let description = rawDesc.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     description = description.slice(0, 200);
 
     if (!title || !link) continue;
@@ -57,6 +65,7 @@ function parseRSS(xml, meta) {
       pubDate,
       pubTimestamp: new Date(pubDate).getTime() || 0,
       description,
+      thumbnail,
       source: '네이버 블로그',
       publisher: meta.publisher,
       type: 'blog',
