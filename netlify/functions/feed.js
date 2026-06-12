@@ -78,20 +78,22 @@ function parseRSS(xml, meta) {
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
     const block = match[1];
+    const decodeEntities = (s) => s
+      .replace(/&amp;/g, '&')   // ⚠️ 반드시 첫 번째 — &amp;nbsp; 같은 이중 인코딩 대응
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ');
+
     const get = (tag) => {
       const m = block.match(fieldRegex(tag));
       if (!m) return '';
       let v = m[1]
         .replace(/<!\[CDATA\[/g, '')
         .replace(/\]\]>/g, '');
-      // HTML 엔티티 디코딩 (&lt;a href...&gt; 같은 찌꺼기 제거를 위해)
-      v = v
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&');
+      // HTML 엔티티 디코딩 — 두 번 돌려서 이중 인코딩까지 처리
+      v = decodeEntities(decodeEntities(v));
       // 태그 제거
       return v.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     };
@@ -103,7 +105,13 @@ function parseRSS(xml, meta) {
     const source = get('source');
 
     // Google News 설명은 제목+출처를 반복하는 경우가 많음 → 중복이면 비움
-    if (description && title && description.includes(title.slice(0, Math.min(20, title.length)))) {
+    // 특수문자/공백 차이(- vs &nbsp; 등)를 무시하고 비교
+    const stripForDup = (s) => s.replace(/&nbsp;/g, '').replace(/[^\w가-힣]/g, '');
+    if (
+      description &&
+      title &&
+      stripForDup(description).includes(stripForDup(title).slice(0, 15))
+    ) {
       description = '';
     }
 

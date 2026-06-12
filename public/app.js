@@ -18,8 +18,6 @@ const state = {
   topic: 'all',
   publisher: 'all',
   view: 'grid',
-  // 콘텐츠 구분 (전체/교과서/교재/AIDT)
-  category: 'all',
   // 기간 필터
   period: { unit: 'all', cursor: new Date() },
   // 캘린더 전용 state
@@ -94,7 +92,6 @@ const els = {
   statCount: document.getElementById('statCount'),
   statusBar: document.getElementById('statusBar'),
   sourceTabs: document.getElementById('sourceTabs'),
-  catTabs: document.getElementById('catTabs'),
   periodGroup: document.getElementById('periodGroup'),
   periodNav: document.getElementById('periodNav'),
   periodLabel: document.getElementById('periodLabel'),
@@ -266,16 +263,6 @@ function bindControls() {
     });
   });
 
-  // 콘텐츠 구분 탭 (교과서/교재/AIDT)
-  els.catTabs.addEventListener('click', (e) => {
-    const tab = e.target.closest('button.cat-tab');
-    if (!tab) return;
-    els.catTabs.querySelectorAll('button.cat-tab').forEach(b => b.classList.remove('is-active'));
-    tab.classList.add('is-active');
-    state.category = tab.getAttribute('data-cat');
-    render();
-  });
-
   // 기간 필터
   bindChipGroup(els.periodGroup, 'data-period', (v) => {
     state.period.unit = v;
@@ -382,11 +369,6 @@ const PUBLISHER_ALIASES = {
 function getFilteredItems() {
   const range = getPeriodRange();
   return getCurrentItems().filter((it) => {
-    // 콘텐츠 구분 필터 (교과서/교재/AIDT)
-    if (state.category !== 'all') {
-      if (classifyCategory(it) !== state.category) return false;
-    }
-
     // 기간 필터
     if (range) {
       const ts = it.pubTimestamp || 0;
@@ -395,7 +377,11 @@ function getFilteredItems() {
 
     // 주제 필터 (뉴스에만 적용)
     if (state.source === 'news' && state.topic !== 'all') {
-      if (!(it.topics || []).includes(state.topic)) return false;
+      let ok = (it.topics || []).includes(state.topic);
+      // 교과서/교재는 키워드 태그 외에 제목/설명 텍스트로도 분류 (더 많은 기사 매칭)
+      if (!ok && state.topic === '교과서') ok = classifyCategory(it) === 'textbook';
+      if (!ok && state.topic === '교재') ok = classifyCategory(it) === 'workbook';
+      if (!ok) return false;
     }
 
     // 출판사/교수학습자료 필터

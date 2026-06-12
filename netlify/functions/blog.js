@@ -31,13 +31,14 @@ function parseRSS(xml, meta) {
       let v = m[1]
         .replace(/<!\[CDATA\[/g, '')
         .replace(/\]\]>/g, '');
-      v = v
+      const dec = (s) => s
+        .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'")
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&');
+        .replace(/&nbsp;/g, ' ');
+      v = dec(dec(v));
       return v.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     };
 
