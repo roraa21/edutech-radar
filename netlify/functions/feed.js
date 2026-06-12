@@ -14,10 +14,10 @@ const SOURCES = [
   { keyword: '광주시교육청 OR 대전시교육청 OR 세종시교육청 OR 충북교육청 OR 충남교육청', topic: '교육청', publisher: null },
   { keyword: '전북교육청 OR 전남교육청 OR 제주교육청', topic: '교육청', publisher: null },
 
-  // 교과서/교재 (구분탭용)
+  // 교과서/교재 (구분탭용) — intitle: 제목에 해당 단어가 있는 기사만 (본문 스침 방지)
   { keyword: '검정 교과서', topic: '교과서', publisher: null },
-  { keyword: '교과서 출판', topic: '교과서', publisher: null },
-  { keyword: '문제집 OR 참고서 출판', topic: '교재', publisher: null },
+  { keyword: 'intitle:교과서 출판', topic: '교과서', publisher: null },
+  { keyword: 'intitle:문제집 OR intitle:참고서', topic: '교재', publisher: null },
 
   // 출판사
   { keyword: '비상교육', topic: null, publisher: '비상교육' },
@@ -56,6 +56,8 @@ const EXCLUDE_KEYWORDS = [
   // 인사/부고 (※ '인사'만 넣으면 '인사이트' 등이 걸리므로 패턴으로)
   '[인사]', '인사이동', '인사발령', '인사 발령', '인사 단행', '임원인사', '인사혁신',
   '[부고]', '[부음]',
+  // 교육과 무관한 분야
+  '산업안전', 'ISO 경영', 'ISO 인증', '중장비', '지게차', '굴착기',
 ];
 
 // 제목 정규화 — 중복 기사 판별용
