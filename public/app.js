@@ -359,11 +359,10 @@ const PUBLISHER_ALIASES = {
   'Y클라우드': ['Y클라우드', '와이클라우드'],
   '능률': ['능률교육', 'NE능률', '능률 교과서'],
   // 연수원
+  '비바샘연수원': ['비바샘연수원', '비바샘 연수원', '비바샘 원격교육연수원', '비바샘원격교육연수원'],
   '아이스크림 연수원': ['아이스크림 연수원', '아이스크림연수원', '아이스크림 원격교육연수원'],
   'T셀파 연수원': ['티셀파 연수원', 'T셀파 연수원', '티셀파연수원'],
   'YBM 연수원': ['YBM 연수원', 'YBM연수원', 'YBM 원격교육연수원'],
-  '에듀니티연수원': ['에듀니티'],
-  '창비교육연수원': ['창비교육'],
 };
 
 function getFilteredItems() {
@@ -1010,7 +1009,12 @@ function formatRelativeTime(ts) {
   if (min < 60) return `${min}분 전`;
   if (hour < 24) return `${hour}시간 전`;
   if (day < 7) return `${day}일 전`;
-  return new Date(ts).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+  const d = new Date(ts);
+  // 올해 기사는 월/일만, 작년 이전 기사는 연도까지 표시
+  if (d.getFullYear() === new Date().getFullYear()) {
+    return d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+  }
+  return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' });
 }
 
 function escapeHtml(s) {
@@ -1258,17 +1262,13 @@ function buildInstagramView(inner, sheetFailed = false) {
 // 연수원 — 뉴스 필터 칩 (출판사 칩과 동일하게 작동)
 // ============================================
 const TRAINING_INSTITUTES = [
+  '비바샘연수원',
   '티처빌',
   '아이스크림 연수원',
   '한국교원연수원',
-  '교육사랑연수원',
   '사제동행',
   'T셀파 연수원',
   'YBM 연수원',
-  '교원캠퍼스',
-  '카운피아',
-  '에듀니티연수원',
-  '창비교육연수원',
 ];
 
 function populateTrainingChips() {
