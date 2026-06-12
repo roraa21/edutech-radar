@@ -26,6 +26,9 @@ const state = {
   calView: 'month', // 'month' | 'upcoming'
   calCursor: null,  // 현재 보고 있는 월의 첫째 날
   calInsights: {},  // 월별 포스팅 주제/키워드
+  // 인스타그램 갤러리 (구글 시트 연동)
+  instaPosts: null,   // null = 아직 안 불러옴
+  instaBrand: 'all',
 };
 
 // ===== Mock Data =====
@@ -115,6 +118,7 @@ function init() {
   initTheme();
   setTodayDate();
   bindControls();
+  populateTrainingChips();
   loadAllData();
 }
 
@@ -216,8 +220,6 @@ function updateTabCounts() {
   if (evCount) evCount.textContent = loadEvents().length;
   const igCount = document.getElementById('countInstagram');
   if (igCount) igCount.textContent = INSTAGRAM_ACCOUNTS.length;
-  const trCount = document.getElementById('countTraining');
-  if (trCount) trCount.textContent = TRAINING_SITES.length;
 }
 
 function bindControls() {
@@ -234,8 +236,8 @@ function bindControls() {
       b.classList.toggle('is-active', i === 0);
     });
 
-    // 캘린더/이벤트/인스타그램/연수원 탭이면 정렬/필터/뷰 컨트롤 숨기기
-    const hideControls = source === 'calendar' || source === 'events' || source === 'instagram' || source === 'training';
+    // 캘린더/이벤트/인스타그램 탭이면 정렬/필터/뷰 컨트롤 숨기기
+    const hideControls = source === 'calendar' || source === 'events' || source === 'instagram';
     document.querySelector('.controls').style.display = hideControls ? 'none' : '';
 
     // 캘린더 탭으로 들어가면 cursor를 오늘 기준으로
@@ -443,11 +445,6 @@ function render() {
   // 인스타그램 탭 — 계정 바로가기 모음
   if (state.source === 'instagram') {
     renderInstagram();
-    return;
-  }
-  // 연수원 탭 — 연수 사이트 바로가기 모음
-  if (state.source === 'training') {
-    renderTraining();
     return;
   }
 
@@ -1025,8 +1022,7 @@ function escapeHtml(s) {
 }
 
 // ============================================
-// 인스타그램 — 경쟁사 공식 계정 바로가기
-// (인스타는 자동 수집 불가 → 링크 모음으로 제공)
+// 인스타그램 — 구글 시트 갤러리 + 공식 계정 바로가기
 // ============================================
 const INSTAGRAM_ACCOUNTS = [
   { service: '티솔루션', publisher: '지학사', handle: 'tsolution_official', url: 'https://www.instagram.com/tsolution_official/' },
@@ -1037,24 +1033,206 @@ const INSTAGRAM_ACCOUNTS = [
   { service: '쌤동네 & 티처빌 연수원', publisher: '티처빌', handle: 'teacherville_official', url: 'https://www.instagram.com/teacherville_official/' },
 ];
 
+// 구글 시트 (링크 공유 상태면 gviz로 바로 CSV 조회 가능)
+const INSTA_SHEET_CSV =
+  'https://docs.google.com/spreadsheets/d/165irQogXFN2T10Dq7CCnEDCaN9hIzCc82AGfJC_IPEQ/gviz/tq?tqx=out:csv';
+
+// CSV 파서 — 따옴표 안의 쉼표/줄바꿈 처리
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cur = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = false;
+      } else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+      else if (c === '\r') { /* skip */ }
+      else cur += c;
+    }
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+// "{pk=..., text=실제캡션}" 형태에서 캡션만 추출
+function cleanCaption(raw) {
+  if (!raw) return '';
+  let t = raw.trim();
+  const m = t.match(/text=([\s\S]*)\}\s*$/);
+  if (m) t = m[1];
+  return t.trim();
+}
+
+// "2026. 5. 12 오전 1:12:18" 한국식 날짜 파싱
+function parseKoreanDate(s) {
+  if (!s) return 0;
+  const m = String(s).match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})(?:\s*(오전|오후)\s*(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (!m) {
+    const d = new Date(s);
+    return isNaN(d) ? 0 : d.getTime();
+  }
+  let hh = m[5] ? parseInt(m[5], 10) : 0;
+  if (m[4] === '오후' && hh < 12) hh += 12;
+  if (m[4] === '오전' && hh === 12) hh = 0;
+  return new Date(+m[1], +m[2] - 1, +m[3], hh, +(m[6] || 0), +(m[7] || 0)).getTime();
+}
+
+async function loadInstaPosts() {
+  if (state.instaPosts) return state.instaPosts;
+  const res = await fetch(INSTA_SHEET_CSV);
+  if (!res.ok) throw new Error(`시트 응답 ${res.status}`);
+  const text = await res.text();
+  const rows = parseCSV(text);
+  if (rows.length < 2) return [];
+
+  const header = rows[0].map(h => h.trim());
+  const col = (name, fallback) => {
+    const i = header.indexOf(name);
+    return i >= 0 ? i : fallback;
+  };
+  const iBrand = col('업체명', 0);
+  const iHandle = col('계정명', 1);
+  const iDate = col('게시일', 2);
+  const iLikes = col('좋아요', 3);
+  const iComments = col('댓글', 4);
+  const iCaption = col('캡션', 5);
+  const iLink = col('게시물링크', 6);
+  const iImage = col('이미지URL', 7);
+
+  const posts = rows.slice(1)
+    .filter(r => r.length >= 7 && r.some(c => c && c.trim()))
+    .map(r => ({
+      brand: (r[iBrand] || '').trim(),
+      handle: (r[iHandle] || '').trim(),
+      ts: parseKoreanDate(r[iDate]),
+      likes: parseInt(r[iLikes], 10) || 0,
+      comments: parseInt(r[iComments], 10) || 0,
+      caption: cleanCaption(r[iCaption]),
+      postUrl: (r[iLink] || '').trim(),
+      imageUrl: (r[iImage] || '').trim(),
+    }))
+    .filter(p => p.brand || p.caption || p.postUrl)
+    .sort((a, b) => b.ts - a.ts);
+
+  state.instaPosts = posts;
+  return posts;
+}
+
 function renderInstagram() {
   els.feed.className = 'feed insta-wrap';
   els.feed.innerHTML = '';
 
-  els.countText.textContent = `${INSTAGRAM_ACCOUNTS.length}개 계정`;
-  els.updatedText.textContent = '클릭하면 인스타그램 새 탭으로 열려요';
-
   const inner = document.createElement('div');
-  inner.className = 'insta-inner';
+  inner.className = 'insta-inner insta-inner--wide';
+  els.feed.appendChild(inner);
 
-  const notice = document.createElement('p');
-  notice.className = 'insta-notice';
-  notice.textContent = '인스타그램은 자동 수집이 제한되어, 경쟁사 공식 계정 바로가기로 제공해요. 주 1회 직접 둘러보며 동향을 체크해보세요!';
-  inner.appendChild(notice);
+  inner.innerHTML = `<div class="event-analyzing"><span class="event-spinner"></span>인스타그램 수집 데이터를 불러오는 중...</div>`;
+
+  loadInstaPosts()
+    .then(() => buildInstagramView(inner))
+    .catch((err) => {
+      console.warn('인스타 시트 로드 실패:', err.message);
+      state.instaPosts = [];
+      buildInstagramView(inner, true);
+    });
+}
+
+function buildInstagramView(inner, sheetFailed = false) {
+  if (state.source !== 'instagram') return;
+  inner.innerHTML = '';
+
+  const posts = state.instaPosts || [];
+  els.countText.textContent = `${posts.length}건의 게시물`;
+  els.updatedText.textContent = posts.length ? '구글 시트에서 자동 수집' : '';
+  const igCount = document.getElementById('countInstagram');
+  if (igCount) igCount.textContent = posts.length || INSTAGRAM_ACCOUNTS.length;
+
+  if (sheetFailed) {
+    const warn = document.createElement('p');
+    warn.className = 'insta-notice';
+    warn.textContent = '⚠️ 구글 시트를 불러오지 못했어요. 시트가 "링크가 있는 모든 사용자 - 뷰어" 공유 상태인지 확인해주세요. 아래 공식 계정 바로가기는 정상 이용 가능해요.';
+    inner.appendChild(warn);
+  }
+
+  // ===== 갤러리 =====
+  if (posts.length > 0) {
+    const brands = ['all', ...new Set(posts.map(p => p.brand).filter(Boolean))];
+    const toolbar = document.createElement('div');
+    toolbar.className = 'ig-toolbar';
+    toolbar.innerHTML = brands.map(b =>
+      `<button class="chip ${state.instaBrand === b ? 'is-active' : ''}" data-brand="${escapeHtml(b)}">${b === 'all' ? '전체' : escapeHtml(b)}</button>`
+    ).join('');
+    toolbar.addEventListener('click', (e) => {
+      const chip = e.target.closest('button.chip');
+      if (!chip) return;
+      state.instaBrand = chip.getAttribute('data-brand');
+      buildInstagramView(inner, sheetFailed);
+    });
+    inner.appendChild(toolbar);
+
+    const filtered = state.instaBrand === 'all'
+      ? posts
+      : posts.filter(p => p.brand === state.instaBrand);
+
+    const gallery = document.createElement('div');
+    gallery.className = 'ig-gallery';
+
+    filtered.slice(0, 60).forEach((p, idx) => {
+      const d = p.ts ? new Date(p.ts) : null;
+      const dateStr = d ? `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}` : '';
+      const card = document.createElement('a');
+      card.className = 'ig-card';
+      card.href = p.postUrl || '#';
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+      card.style.animationDelay = `${Math.min(idx, 12) * 0.04}s`;
+      card.innerHTML = `
+        <div class="ig-img">
+          ${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer"
+            onerror="this.style.display='none'; this.parentElement.classList.add('is-broken');" />` : ''}
+          <div class="ig-img-fallback">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            <span>이미지 만료</span>
+          </div>
+        </div>
+        <div class="ig-body">
+          <div class="ig-top">
+            <span class="ig-brand">${escapeHtml(p.brand)}</span>
+            <span class="ig-date">${dateStr}</span>
+          </div>
+          ${p.caption ? `<p class="ig-caption">${escapeHtml(p.caption.slice(0, 150))}</p>` : ''}
+          <div class="ig-stats">♥ ${p.likes.toLocaleString()} &nbsp;·&nbsp; 💬 ${p.comments.toLocaleString()}</div>
+        </div>
+      `;
+      if (!p.imageUrl) card.querySelector('.ig-img').classList.add('is-broken');
+      gallery.appendChild(card);
+    });
+
+    inner.appendChild(gallery);
+
+    if (filtered.length > 60) {
+      const more = document.createElement('p');
+      more.className = 'insta-notice';
+      more.style.marginTop = '16px';
+      more.textContent = `최근 60건만 표시 중이에요 (전체 ${filtered.length}건). 전체는 구글 시트에서 확인하세요.`;
+      inner.appendChild(more);
+    }
+  }
+
+  // ===== 공식 계정 바로가기 =====
+  const divider = document.createElement('h3');
+  divider.className = 'ig-section-title';
+  divider.textContent = '공식 계정 바로가기';
+  inner.appendChild(divider);
 
   const grid = document.createElement('div');
   grid.className = 'insta-grid';
-
   INSTAGRAM_ACCOUNTS.forEach((acc, idx) => {
     const a = document.createElement('a');
     a.className = 'insta-card';
@@ -1076,13 +1254,11 @@ function renderInstagram() {
     `;
     grid.appendChild(a);
   });
-
   inner.appendChild(grid);
-  els.feed.appendChild(inner);
 }
 
 // ============================================
-// 연수원 — 교사 연수 사이트 바로가기
+// 연수원 — 필터 영역의 바로가기 칩 (클릭 시 새 탭)
 // ============================================
 const TRAINING_SITES = [
   { name: '티처빌', url: 'https://www.teacherville.co.kr' },
@@ -1098,49 +1274,18 @@ const TRAINING_SITES = [
   { name: '창비교육연수원', url: 'https://teacher.changbiedu.com' },
 ];
 
-function renderTraining() {
-  els.feed.className = 'feed insta-wrap';
-  els.feed.innerHTML = '';
-
-  els.countText.textContent = `${TRAINING_SITES.length}개 연수원`;
-  els.updatedText.textContent = '클릭하면 연수원 사이트가 새 탭으로 열려요';
-
-  const inner = document.createElement('div');
-  inner.className = 'insta-inner';
-
-  const notice = document.createElement('p');
-  notice.className = 'insta-notice';
-  notice.textContent = '주요 교사 연수 사이트 바로가기예요. 경쟁사 연수 프로그램과 트렌드를 둘러보기 좋아요!';
-  inner.appendChild(notice);
-
-  const grid = document.createElement('div');
-  grid.className = 'insta-grid';
-
-  TRAINING_SITES.forEach((site, idx) => {
-    const domain = site.url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+function populateTrainingChips() {
+  const group = document.getElementById('trainingGroup');
+  if (!group) return;
+  TRAINING_SITES.forEach((site) => {
     const a = document.createElement('a');
-    a.className = 'insta-card';
+    a.className = 'chip chip--link';
     a.href = site.url;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
-    a.style.animationDelay = `${idx * 0.04}s`;
-    a.innerHTML = `
-      <span class="insta-avatar is-training">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-      </span>
-      <span class="insta-info">
-        <span class="insta-service">${escapeHtml(site.name)}</span>
-        <span class="insta-meta">${escapeHtml(domain)}</span>
-      </span>
-      <span class="insta-arrow">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
-      </span>
-    `;
-    grid.appendChild(a);
+    a.textContent = site.name;
+    group.appendChild(a);
   });
-
-  inner.appendChild(grid);
-  els.feed.appendChild(inner);
 }
 
 // ============================================
