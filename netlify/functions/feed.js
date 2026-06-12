@@ -38,6 +38,11 @@ const SOURCES = [
   { keyword: '티셀파 OR T셀파', topic: null, publisher: '티셀파' },
   { keyword: '엠티처', topic: null, publisher: '엠티처' },
   { keyword: '티솔루션', topic: null, publisher: '티솔루션' },
+
+  // 교사 연수원
+  { keyword: '티처빌 OR 아이스크림 연수원 OR 한국교원연수원', topic: null, publisher: null },
+  { keyword: '교육사랑연수원 OR 교원캠퍼스 OR 카운피아', topic: null, publisher: null },
+  { keyword: '에듀니티 OR 창비교육 연수 OR YBM 연수원 OR 티셀파 연수원', topic: null, publisher: null },
 ];
 
 // ===== 제외 키워드 (제목에 포함되면 수집 제외) =====
@@ -194,14 +199,33 @@ exports.handler = async function () {
       .sort((a, b) => b.pubTimestamp - a.pubTimestamp);
 
     // 제목이 거의 같은 기사(같은 보도자료를 여러 언론사가 받아쓴 경우) 1건만 유지
-    const seenTitles = new Set();
-    merged = merged.filter((item) => {
+    // — 받아쓴 매체 수를 popularity로 기록 (인기순 정렬 기준)
+    const titleMap = new Map();
+    const deduped = [];
+    for (const item of merged) {
       const key = normalizeTitle(item.title);
-      if (!key) return true;
-      if (seenTitles.has(key)) return false;
-      seenTitles.add(key);
-      return true;
-    });
+      if (!key) {
+        item.popularity = 1;
+        deduped.push(item);
+        continue;
+      }
+      const existing = titleMap.get(key);
+      if (existing) {
+        existing.popularity = (existing.popularity || 1) + 1;
+        // 태그 병합 (중복 기사에 다른 태그가 붙어있으면 합침)
+        (item.topics || []).forEach((t) => {
+          if (!existing.topics.includes(t)) existing.topics.push(t);
+        });
+        (item.publishers || []).forEach((p) => {
+          if (!existing.publishers.includes(p)) existing.publishers.push(p);
+        });
+      } else {
+        item.popularity = 1;
+        titleMap.set(key, item);
+        deduped.push(item);
+      }
+    }
+    merged = deduped;
 
     // 최신 12건만 썸네일 시도
     await enrichThumbnails(merged, 12);

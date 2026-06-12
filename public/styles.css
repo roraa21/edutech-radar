@@ -2579,3 +2579,18 @@ button:focus-visible, a:focus-visible {
   .ig-body { padding: 10px 12px 12px; }
   .ig-caption { -webkit-line-clamp: 2; font-size: 12px; }
 }
+
+/* 보도 매체 수 뱃지 (인기 신호) */
+.card-pop {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c-coral) 12%, transparent);
+  color: var(--c-coral);
+  white-space: nowrap;
+}
+.card.is-feature .card-pop {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}

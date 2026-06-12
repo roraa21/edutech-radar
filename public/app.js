@@ -251,8 +251,8 @@ function bindControls() {
 
   bindChipGroup(els.sortGroup, 'data-sort', (v) => { state.sort = v; render(); });
   bindChipGroup(els.topicGroup, 'data-topic', (v) => { state.topic = v; render(); });
-  // 출판사 + 교수학습자료: 두 그룹이 하나의 필터 공유 (한쪽 선택 시 다른 쪽 해제)
-  const pubGroups = [els.publisherGroup, els.materialGroup].filter(Boolean);
+  // 출판사 + 교수학습자료 + 연수원: 세 그룹이 하나의 필터 공유 (한쪽 선택 시 다른 쪽 해제)
+  const pubGroups = [els.publisherGroup, els.materialGroup, document.getElementById('trainingGroup')].filter(Boolean);
   pubGroups.forEach((group) => {
     group.addEventListener('click', (e) => {
       const chip = e.target.closest('button.chip');
@@ -371,6 +371,12 @@ const PUBLISHER_ALIASES = {
   '티셀파': ['티셀파', 'T셀파'],
   'Y클라우드': ['Y클라우드', '와이클라우드'],
   '능률': ['능률교육', 'NE능률', '능률 교과서'],
+  // 연수원
+  '아이스크림 연수원': ['아이스크림 연수원', '아이스크림연수원', '아이스크림 원격교육연수원'],
+  'T셀파 연수원': ['티셀파 연수원', 'T셀파 연수원', '티셀파연수원'],
+  'YBM 연수원': ['YBM 연수원', 'YBM연수원', 'YBM 원격교육연수원'],
+  '에듀니티연수원': ['에듀니티'],
+  '창비교육연수원': ['창비교육'],
 };
 
 function getFilteredItems() {
@@ -425,10 +431,12 @@ function getSortedItems() {
 }
 
 function popularityScore(item) {
+  // 핵심 신호: 같은 기사를 받아쓴 매체 수 (많을수록 화제)
+  const dupCount = item.popularity || 1;
   const tagCount = (item.topics?.length || 0) + (item.publishers?.length || 0) + (item.publisher ? 1 : 0);
   const ageDays = (Date.now() - (item.pubTimestamp || 0)) / (1000 * 60 * 60 * 24);
   const recencyBoost = Math.max(0, 7 - ageDays);
-  return tagCount * 3 + recencyBoost;
+  return dupCount * 10 + tagCount * 2 + recencyBoost;
 }
 
 function render() {
@@ -819,7 +827,10 @@ function createNewsCard(item, isFeature) {
 
   const meta = document.createElement('div');
   meta.className = 'card-meta';
-  meta.innerHTML = `<span class="card-source">${escapeHtml(item.source || '출처')}</span><span class="card-time">${formatRelativeTime(item.pubTimestamp)}</span>`;
+  const popBadge = (item.popularity || 1) > 1
+    ? `<span class="card-pop">🔥 ${item.popularity}개 매체</span>`
+    : '';
+  meta.innerHTML = `<span class="card-source">${escapeHtml(item.source || '출처')}</span><span class="card-time">${formatRelativeTime(item.pubTimestamp)}</span>${popBadge}`;
 
   const title = document.createElement('h2');
   title.className = 'card-title';
@@ -1258,33 +1269,31 @@ function buildInstagramView(inner, sheetFailed = false) {
 }
 
 // ============================================
-// 연수원 — 필터 영역의 바로가기 칩 (클릭 시 새 탭)
+// 연수원 — 뉴스 필터 칩 (출판사 칩과 동일하게 작동)
 // ============================================
-const TRAINING_SITES = [
-  { name: '티처빌', url: 'https://www.teacherville.co.kr' },
-  { name: '아이스크림 연수원', url: 'https://teacher.i-scream.co.kr' },
-  { name: '한국교원연수원', url: 'https://www.hstudy.co.kr' },
-  { name: '교육사랑연수원', url: 'https://www.edulove.co.kr/main' },
-  { name: '사제동행', url: 'https://www.education.or.kr' },
-  { name: 'T셀파 연수원', url: 'https://edu.tsherpa.co.kr' },
-  { name: 'YBM 연수원', url: 'https://www.ybmteachers.com' },
-  { name: '교원캠퍼스', url: 'https://www.teacher21.co.kr' },
-  { name: '카운피아', url: 'https://counpia.com' },
-  { name: '에듀니티연수원', url: 'https://happy.eduniety.net' },
-  { name: '창비교육연수원', url: 'https://teacher.changbiedu.com' },
+const TRAINING_INSTITUTES = [
+  '티처빌',
+  '아이스크림 연수원',
+  '한국교원연수원',
+  '교육사랑연수원',
+  '사제동행',
+  'T셀파 연수원',
+  'YBM 연수원',
+  '교원캠퍼스',
+  '카운피아',
+  '에듀니티연수원',
+  '창비교육연수원',
 ];
 
 function populateTrainingChips() {
   const group = document.getElementById('trainingGroup');
   if (!group) return;
-  TRAINING_SITES.forEach((site) => {
-    const a = document.createElement('a');
-    a.className = 'chip chip--link';
-    a.href = site.url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.textContent = site.name;
-    group.appendChild(a);
+  TRAINING_INSTITUTES.forEach((name) => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.setAttribute('data-publisher', name);
+    btn.textContent = name;
+    group.appendChild(btn);
   });
 }
 
