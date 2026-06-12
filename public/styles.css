@@ -2594,3 +2594,222 @@ button:focus-visible, a:focus-visible {
   background: rgba(255, 255, 255, 0.22);
   color: #fff;
 }
+
+/* ============================================
+   레이아웃 B — 좌측 사이드바 (UI 개편)
+   ============================================ */
+.layout { display: flex; min-height: 100vh; }
+
+.side {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 248px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 22px 16px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 50;
+  scrollbar-width: thin;
+}
+
+.main-col {
+  margin-left: 248px;
+  flex: 1;
+  min-width: 0;
+  padding: 22px clamp(16px, 3vw, 36px) 60px;
+}
+
+/* ----- 사이드바: 브랜드 ----- */
+.side-brand { padding: 0 6px 14px; }
+.side-brand-top {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
+.side-brand-top .brand-mark {
+  width: 26px; height: 26px;
+  color: var(--accent);
+  display: grid; place-items: center;
+}
+.side-brand-top .brand-mark svg { width: 100%; height: 100%; }
+.side-brand-name {
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+.side-title {
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.32;
+  letter-spacing: -0.03em;
+  white-space: normal;
+  margin: 0 0 8px;
+  display: block;
+}
+.side-title .hero-italic { font-size: 0.95em; }
+.side-title .hero-italic em { padding: 0 4px; }
+.side-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.55;
+}
+
+/* ----- 사이드바: 날짜/상태 ----- */
+.side-date {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11.5px; font-weight: 600; color: var(--text-soft);
+  padding: 0 6px 6px;
+  flex-wrap: wrap;
+}
+.side-date .status-pill { margin-left: auto; font-size: 10px; padding: 3px 8px; }
+
+/* ----- 레벨 라벨 ----- */
+.lv-label {
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em;
+  color: var(--text-faint);
+  padding: 0 6px;
+  margin: 14px 0 6px;
+}
+.lv-label b { color: var(--accent); }
+
+/* ----- 사이드바: CATEGORY (주제 칩 → 수직 내비) ----- */
+.side #topicGroup { display: flex; flex-direction: column; gap: 2px; }
+.side #topicGroup .chip {
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+  box-shadow: none;
+}
+.side #topicGroup .chip:hover { background: var(--bg-sunk); color: var(--text); transform: none; }
+.side #topicGroup .chip.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ----- 사이드바: SOURCE (소스 탭 → 수직) ----- */
+.side .tabs-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.side .src-tab {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  box-shadow: none;
+}
+.side .src-tab:hover { background: var(--bg-sunk); transform: none; box-shadow: none; }
+.side .src-tab .src-tab-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.side .src-tab .src-tab-icon svg { width: 15px; height: 15px; }
+.side .src-tab .src-tab-label { font-size: 12.5px; }
+.side .src-tab .src-tab-sub { display: none; }
+.side .src-tab.is-active {
+  background: var(--accent-soft);
+  border: none;
+}
+.side .src-tab.is-active .src-tab-label { color: var(--accent-deep); }
+[data-theme="dark"] .side .src-tab.is-active .src-tab-label { color: var(--accent); }
+
+/* ----- 사이드바: 하단 버튼 ----- */
+.side-bottom {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.side-bottom .chat-header-btn { flex: 1; justify-content: center; }
+
+/* ----- 메인: 통계 카드 ----- */
+.main-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.main-stats .stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 20px;
+  min-width: 0;
+}
+.main-stats .stat-num {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.main-stats .stat-label { font-size: 10.5px; color: var(--text-faint); margin-top: 2px; }
+
+/* ----- 메인: 컨트롤 재배치 ----- */
+.main-col .controls { padding: 0; background: transparent; border: none; }
+.main-col .controls-inner {
+  max-width: none;
+  padding: 16px 18px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.controls-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0 10px;
+}
+.main-col .meta-bar {
+  max-width: none;
+  padding: 12px 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.crumb-path { font-weight: 700; color: var(--text); }
+.crumb-path .crumb-sep { color: var(--border-strong, #c4cedd); margin: 0 5px; font-weight: 400; }
+
+/* ----- 메인: 피드 폭 ----- */
+.main-col .feed-wrap { padding: 0; }
+.main-col .feed { max-width: none; padding: 16px 0 0; }
+.main-col .insta-inner, .main-col .insta-inner--wide { padding-left: 0; padding-right: 0; }
+
+/* ----- 반응형: 사이드바 → 상단 ----- */
+@media (max-width: 920px) {
+  .layout { flex-direction: column; }
+  .side {
+    position: static;
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+  }
+  .main-col { margin-left: 0; padding: 16px; }
+  .side #topicGroup { flex-direction: row; flex-wrap: wrap; }
+  .side #topicGroup .chip { width: auto; padding: 7px 14px; background: var(--bg-sunk); border-radius: 999px; }
+  .side #topicGroup .chip.is-active { background: var(--accent); }
+  .side .tabs-inner { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; }
+  .side .src-tab { width: auto; flex-shrink: 0; }
+  .side-bottom { margin-top: 12px; }
+  .side-title { font-size: 19px; }
+  .side-title br { display: none; }
+}

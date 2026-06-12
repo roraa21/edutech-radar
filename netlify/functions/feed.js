@@ -40,9 +40,9 @@ const SOURCES = [
   { keyword: '티솔루션', topic: null, publisher: '티솔루션' },
 
   // 교사 연수원
-  { keyword: '비바샘 연수원 OR 비바샘 원격교육연수원', topic: null, publisher: null },
-  { keyword: '티처빌 OR 아이스크림 연수원 OR 한국교원연수원', topic: null, publisher: null },
-  { keyword: 'YBM 연수원 OR 티셀파 연수원 OR 사제동행 연수', topic: null, publisher: null },
+  { keyword: '비바샘 연수원 OR 비바샘 원격교육연수원', topic: '연수원', publisher: null },
+  { keyword: '티처빌 OR 아이스크림 연수원 OR 한국교원연수원', topic: '연수원', publisher: null },
+  { keyword: 'YBM 연수원 OR 티셀파 연수원 OR 사제동행 연수', topic: '연수원', publisher: null },
 ];
 
 // ===== 제외 키워드 (제목에 포함되면 수집 제외) =====

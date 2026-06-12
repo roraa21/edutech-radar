@@ -16,17 +16,10 @@
 </head>
 <body>
 
-<!-- ===== 백그라운드 블롭 ===== -->
-<div class="bg-blobs" aria-hidden="true">
-  <div class="blob blob--1"></div>
-  <div class="blob blob--2"></div>
-  <div class="blob blob--3"></div>
-</div>
-
-<!-- ===== 헤더 ===== -->
-<header class="header">
-  <div class="header-inner">
-    <a href="#" class="brand">
+<div class="layout">
+<aside class="side" id="sideNav">
+  <div class="side-brand">
+    <div class="side-brand-top">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
@@ -36,75 +29,36 @@
           <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2" opacity="0.4"/>
         </svg>
       </span>
-      <span class="brand-text">
-        <span class="brand-name">Edutech Radar</span>
-        <span class="brand-sub">교육 업계 데일리</span>
-      </span>
-    </a>
-
-    <div class="header-actions">
-      <button class="chat-header-btn" id="chatFab">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>AI 인사이트 채팅</span>
-      </button>
-      <div class="status-pill" id="statusBar">
-        <span class="status-dot"></span>
-        <span class="status-text">동기화 중</span>
-      </div>
-      <button class="theme-toggle" id="themeToggle" aria-label="테마 변경">
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="4"/>
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-        </svg>
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
-      </button>
+      <span class="side-brand-name">Edutech Radar</span>
     </div>
-  </div>
-</header>
-
-<!-- ===== 히어로 ===== -->
-<section class="hero">
-  <div class="hero-inner">
-    <div class="hero-badge">
-      <span class="badge-dot"></span>
-      <span><span id="todayDate">—</span> · 자동 수집 큐레이션</span>
-    </div>
-    <h1 class="hero-title">
-      오늘의 <span class="hero-accent">교육 동향,</span> <span class="hero-italic"><em>한 번에.</em></span>
+    <h1 class="side-title">
+      오늘의 <span class="hero-accent">교육 동향,</span><br><span class="hero-italic"><em>한 번에.</em></span>
     </h1>
-    <p class="hero-desc">
-      교과서, 에듀테크, 교재, AI 디지털 교육자료 등 주요 경쟁사 동향을 30분마다 자동으로 모아드려요.
-    </p>
+    <p class="side-sub">교과서 · 에듀테크 · AI 디지털 교육자료<br>30분마다 자동 큐레이션</p>
+  </div>
 
-    <div class="hero-stats">
-      <div class="stat">
-        <div class="stat-num" id="statCount">—</div>
-        <div class="stat-label">전체 콘텐츠</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">31</div>
-        <div class="stat-label">뉴스 키워드</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">9</div>
-        <div class="stat-label">유튜브 채널</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">4</div>
-        <div class="stat-label">블로그 모니터링</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">2026</div>
-        <div class="stat-label">학사 캘린더</div>
-      </div>
+  <div class="side-date">
+    <span class="badge-dot"></span>
+    <span id="todayDate">—</span>
+    <div class="status-pill" id="statusBar">
+      <span class="status-dot"></span>
+      <span class="status-text">동기화 중</span>
     </div>
   </div>
-</section>
 
-<!-- ===== 소스 탭 ===== -->
-<section class="source-tabs" aria-label="소스 선택">
+  <div class="lv-label"><b>CATEGORY</b> · 주제</div>
+  <div class="chip-row" id="topicGroup">
+        <button class="chip is-active" data-topic="all">전체</button>
+        <button class="chip" data-topic="교과서">교과서</button>
+        <button class="chip" data-topic="교재">교재</button>
+        <button class="chip" data-topic="AIDT">AI 디지털</button>
+        <button class="chip" data-topic="에듀테크">에듀테크</button>
+        <button class="chip" data-topic="정책">정책</button>
+        <button class="chip" data-topic="교육청">교육청</button>
+        <button class="chip" data-topic="연수원">연수원</button>
+      </div>
+
+  <div class="lv-label"><b>SOURCE</b> · 소스</div>
   <div class="tabs-inner" id="sourceTabs">
     <button class="src-tab is-active" data-source="news">
       <span class="src-tab-icon">
@@ -161,50 +115,67 @@
       </span>
     </button>
   </div>
-</section>
+
+  <div class="side-bottom">
+    <button class="chat-header-btn" id="chatFab">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>AI 인사이트 채팅</span>
+      </button>
+    <button class="theme-toggle" id="themeToggle" aria-label="테마 변경">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+  </div>
+</aside>
+
+<div class="main-col">
+
+<div class="main-stats">
+      <div class="stat">
+        <div class="stat-num" id="statCount">—</div>
+        <div class="stat-label">전체 콘텐츠</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">31</div>
+        <div class="stat-label">뉴스 키워드</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">9</div>
+        <div class="stat-label">유튜브 채널</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">4</div>
+        <div class="stat-label">블로그 모니터링</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">2026</div>
+        <div class="stat-label">학사 캘린더</div>
+      </div>
+    
+</div>
+
+<!-- ===== 백그라운드 블롭 ===== -->
+<div class="bg-blobs" aria-hidden="true">
+  <div class="blob blob--1"></div>
+  <div class="blob blob--2"></div>
+  <div class="blob blob--3"></div>
+</div>
+
+<!-- ===== 헤더 ===== -->
+
+
 
 <!-- ===== 컨트롤 ===== -->
 <section class="controls" aria-label="필터 및 정렬">
   <div class="controls-inner">
 
-    <div class="control-group">
-      <div class="control-label">정렬</div>
-      <div class="chip-row" id="sortGroup">
-        <button class="chip is-active" data-sort="date">최신순</button>
-        <button class="chip" data-sort="popular">인기순</button>
-      </div>
-    </div>
 
-    <div class="control-group">
-      <div class="control-label">기간</div>
-      <div class="chip-row" id="periodGroup">
-        <button class="chip is-active" data-period="all">전체</button>
-        <button class="chip" data-period="week">주별</button>
-        <button class="chip" data-period="month">월별</button>
-      </div>
-      <div class="period-nav" id="periodNav" hidden>
-        <button class="period-nav-btn" id="periodPrev" aria-label="이전">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <span class="period-label" id="periodLabel">—</span>
-        <button class="period-nav-btn" id="periodNext" aria-label="다음">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
-    </div>
 
-    <div class="control-group">
-      <div class="control-label">주제</div>
-      <div class="chip-row" id="topicGroup">
-        <button class="chip is-active" data-topic="all">전체</button>
-        <button class="chip" data-topic="교과서">교과서</button>
-        <button class="chip" data-topic="교재">교재</button>
-        <button class="chip" data-topic="AIDT">AI 디지털 교육자료</button>
-        <button class="chip" data-topic="에듀테크">에듀테크</button>
-        <button class="chip" data-topic="정책">정책</button>
-        <button class="chip" data-topic="교육청">교육청</button>
-      </div>
-    </div>
 
     <div class="control-group">
       <div class="control-label">출판사</div>
@@ -241,6 +212,34 @@
       <div class="chip-row" id="trainingGroup"></div>
     </div>
 
+    <div class="controls-divider"></div>
+
+    <div class="control-group">
+      <div class="control-label">정렬</div>
+      <div class="chip-row" id="sortGroup">
+        <button class="chip is-active" data-sort="date">최신순</button>
+        <button class="chip" data-sort="popular">인기순</button>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">기간</div>
+      <div class="chip-row" id="periodGroup">
+        <button class="chip is-active" data-period="all">전체</button>
+        <button class="chip" data-period="week">주별</button>
+        <button class="chip" data-period="month">월별</button>
+      </div>
+      <div class="period-nav" id="periodNav" hidden>
+        <button class="period-nav-btn" id="periodPrev" aria-label="이전">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="period-label" id="periodLabel">—</span>
+        <button class="period-nav-btn" id="periodNext" aria-label="다음">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
     <div class="view-switch" role="tablist">
       <button class="view-btn is-active" id="viewGrid" role="tab" aria-selected="true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -255,6 +254,7 @@
   </div>
 
   <div class="meta-bar">
+    <span id="crumbPath" class="crumb-path"></span>
     <span id="countText">— 건</span>
     <span class="meta-dot">•</span>
     <span id="updatedText">갱신: —</span>
@@ -272,6 +272,9 @@
     <div class="skel"></div>
   </div>
 </main>
+
+</div><!-- /main-col -->
+</div><!-- /layout -->
 
 <template id="emptyTemplate">
   <div class="empty">

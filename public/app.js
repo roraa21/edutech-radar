@@ -380,6 +380,11 @@ function getFilteredItems() {
       // 교과서/교재는 키워드 태그 외에 제목/설명 텍스트로도 분류 (더 많은 기사 매칭)
       if (!ok && state.topic === '교과서') ok = classifyCategory(it) === 'textbook';
       if (!ok && state.topic === '교재') ok = classifyCategory(it) === 'workbook';
+      // 연수원도 텍스트 보강 ('연수'만 쓰면 인천 연수구 오탐 → 정확 패턴만)
+      if (!ok && state.topic === '연수원') {
+        const hay = `${it.title || ''} ${it.description || ''}`;
+        ok = ['연수원', '교원 연수', '교사 연수', '원격연수'].some(w => hay.includes(w));
+      }
       if (!ok) return false;
     }
 
@@ -448,8 +453,22 @@ function render() {
   else renderGrid(items);
 }
 
+// 브레드크럼 — 현재 보고 있는 위치를 "주제 › 출판사 › 소스"로 표시
+const SOURCE_LABELS = { news: '뉴스', youtube: '유튜브', blog: '블로그', instagram: '인스타그램', calendar: '학사일정', events: '이벤트 분석' };
+const TOPIC_LABELS = { all: '전체', AIDT: 'AI 디지털' };
+function updateCrumb() {
+  const el = document.getElementById('crumbPath');
+  if (!el) return;
+  const parts = [];
+  parts.push(TOPIC_LABELS[state.topic] || state.topic);
+  if (state.publisher !== 'all') parts.push(state.publisher);
+  parts.push(SOURCE_LABELS[state.source] || state.source);
+  el.innerHTML = parts.map(escapeHtml).join('<span class="crumb-sep">›</span>');
+}
+
 function updateMeta(count) {
   els.countText.textContent = `${count.toLocaleString()} 건`;
+  updateCrumb();
   if (els.statCount) {
     const total = state.data.news.length + state.data.youtube.length + state.data.blog.length;
     els.statCount.textContent = total.toLocaleString();
